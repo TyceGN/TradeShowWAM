@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Whack-a-Mole</title>
+  <!-- Load Phaser from a CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <style>
+    body { margin: 0; }
+  </style>
+</head>
+<body>
+  <script>
+    // Configure the game: adjust width and height as needed
+    const config = {
+      type: Phaser.AUTO,
+      width: 800,
+      height: 600,
+      scene: { preload, create, update }
+    };
+
+    const game = new Phaser.Game(config);
+    let score = 0;
+    let scoreText;
+    let moles;  // group for mole sprites
+
+    function preload() {
+      // Load assets (replace these with your own image URLs or paths)
+      this.load.image('background', 'assets/background.png');  // Background image
+      this.load.image('mole', 'assets/mole.png');              // Mole image
+    }
+
+    function create() {
+      // Add background
+      this.add.image(config.width/2, config.height/2, 'background');
+
+      // Display score
+      scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+
+      // Create a group for moles
+      moles = this.physics.add.group();
+
+      // Spawn a mole every second
+      this.time.addEvent({
+        delay: 1000,
+        callback: spawnMole,
+        callbackScope: this,
+        loop: true
+      });
+    }
+
+    function spawnMole() {
+      // Pick a random position within the game bounds
+      const x = Phaser.Math.Between(100, config.width - 100);
+      const y = Phaser.Math.Between(100, config.height - 100);
+      
+      // Add the mole to the game and make it interactive
+      let mole = moles.create(x, y, 'mole').setInteractive();
+
+      // When the mole is clicked/tapped, remove it and update the score
+      mole.on('pointerdown', () => {
+        mole.destroy();
+        score += 10;
+        scoreText.setText('Score: ' + score);
+      });
+
+      // Remove the mole automatically after a short delay if not whacked
+      this.time.addEvent({
+        delay: 800,
+        callback: () => {
+          if (mole.active) {
+            mole.destroy();
+          }
+        },
+        callbackScope: this
+      });
+    }
+
+    function update() {
+      // Any continuous updates can go here
+    }
+  </script>
+</body>
+</html>
