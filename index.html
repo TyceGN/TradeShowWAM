@@ -5,8 +5,10 @@
   <title>Whack-a-Mole Game</title>
   <!-- Load Phaser from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
-  <!-- Load the Press Start 2P font via Google Fonts (fallback in CSS if needed) -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Recommended Google Fonts links -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body { margin: 0; }
   </style>
@@ -24,24 +26,14 @@
       // Load your background and mole assets (update paths as needed)
       this.load.image('background', 'assets/background.png');
       this.load.image('mole', 'assets/mole.png');
-      // Load the WebFont Loader script so we can load custom fonts
-      this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
     }
 
     create() {
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
-      // Load the custom font and then initialize UI elements
-      WebFont.load({
-        google: {
-          families: ['Press Start 2P']
-        },
-        active: () => {
-          // Once the font is loaded, create UI text and start the game events
-          this.createUI();
-        }
-      });
+      // Create UI elements now that the browser has loaded the fonts via the link tags
+      this.createUI();
 
       // Create a group for moles (spawned later)
       this.moles = this.physics.add.group();
@@ -55,16 +47,16 @@
       });
     }
 
-    // Function to create UI elements after the font is loaded
+    // Function to create UI elements
     createUI() {
-      // Display the current score
+      // Display the current score using the Press Start 2P font
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
         fontSize: '32px', 
         fill: '#fff',
         fontFamily: 'Press Start 2P'
       });
 
-      // Display timer in top right
+      // Display timer in top right using the Press Start 2P font
       this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
         fontSize: '45px', 
         fill: '#f00',
