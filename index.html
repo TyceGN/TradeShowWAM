@@ -62,7 +62,8 @@
 
       // Display timer using the Pixelify Sans font
       this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
-        font: '45px "Pixelify Sans", sans-serif',
+        fontSize: '45px',
+        fontFamily: '"Pixelify Sans"',
         fill: '#f00'
       });
 
@@ -91,7 +92,8 @@
 
             // Add "Game Over!" text, centered over the white box using Pixelify Sans
             this.add.text(400, 300, 'Game Over!', { 
-              font: '48px "Pixelify Sans", sans-serif',
+              fontSize: '48px',
+              fontFamily: '"Pixelify Sans"',
               fill: '#f00',
               fontStyle: 'bold'
             })
@@ -122,7 +124,7 @@
 
       // Create the mole a bit below its hole (e.g., 50 pixels lower)
       let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
-      mole.setOrigin(0.5, 1); // bottom center is the anchor
+      mole.setOrigin(0.4, 1); // bottom center is the anchor
 
       // Tween the mole to "pop up" from below the hole to its final position
       this.tweens.add({
