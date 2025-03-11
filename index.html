@@ -52,9 +52,10 @@
 
     // Function to create UI elements
     createUI() {
+      console.log('Creating UI elements with Press Start 2P');
       // Display the current score using the Press Start 2P font
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-        font: '32px "Press Start 2P"',
+        font: '32px "Press Start 2P", sans-serif',
         fill: '#fff'
       });
 
@@ -176,6 +177,7 @@
       families: ['Press Start 2P']
     },
     active: function() {
+      console.log('Font loaded, creating game instance');
       // Create the Phaser game instance only after the font is loaded
       const game = new Phaser.Game(config);
     }
