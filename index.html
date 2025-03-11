@@ -5,10 +5,10 @@
   <title>Whack-a-Mole Game</title>
   <!-- Load Phaser from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
-  <!-- Recommended Google Fonts links -->
+  <!-- Recommended Google Fonts links for Pixelify Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
   <!-- Load WebFont Loader -->
   <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
   <style>
@@ -35,9 +35,6 @@
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
-      // Create an offscreen dummy text object to ensure the font is committed
-      this.add.text(-100, -100, 'dummy', { font: '32px "Press Start 2P", sans-serif' }).destroy();
-
       // Create UI elements (score and timer)
       this.createUI();
 
@@ -55,17 +52,16 @@
 
     // Function to create UI elements
     createUI() {
-      console.log('Creating UI elements with Press Start 2P');
-      // Display the current score using the Press Start 2P font
+      console.log('Creating UI elements with Pixelify Sans');
+      // Display the current score using the Pixelify Sans font
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-        fontSize: '32px',
-        fontFamily: '"Press Start 2P"',
+        font: '32px "Pixelify Sans", sans-serif',
         fill: '#fff'
       });
 
-      // Display timer using the Press Start 2P font
+      // Display timer using the Pixelify Sans font
       this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
-        font: '45px "Press Start 2P"',
+        font: '45px "Pixelify Sans", sans-serif',
         fill: '#f00'
       });
 
@@ -92,9 +88,9 @@
             graphics.lineStyle(2, 0xff0000, 1);
             graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-            // Add "Game Over!" text, centered over the white box
+            // Add "Game Over!" text, centered over the white box using Pixelify Sans
             this.add.text(400, 300, 'Game Over!', { 
-              font: '48px "Press Start 2P"',
+              font: '48px "Pixelify Sans", sans-serif',
               fill: '#f00',
               fontStyle: 'bold'
             })
@@ -178,7 +174,7 @@
   // Use WebFont.load to wait for the custom font to be active before starting the game
   WebFont.load({
     google: {
-      families: ['Press Start 2P']
+      families: ['Pixelify Sans']
     },
     active: function() {
       console.log('Font loaded, creating game instance');
@@ -189,3 +185,4 @@
 </script>
 </body>
 </html>
+
