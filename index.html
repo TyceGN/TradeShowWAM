@@ -5,7 +5,7 @@
   <title>Whack-a-Mole Game</title>
   <!-- Load Phaser from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
-  <!-- Load the Press Start 2P font for a retro pixel style -->
+  <!-- Load the Press Start 2P font via Google Fonts (fallback in CSS if needed) -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body { margin: 0; }
@@ -24,12 +24,39 @@
       // Load your background and mole assets (update paths as needed)
       this.load.image('background', 'assets/background.png');
       this.load.image('mole', 'assets/mole.png');
+      // Load the WebFont Loader script so we can load custom fonts
+      this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
     }
 
     create() {
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
+      // Load the custom font and then initialize UI elements
+      WebFont.load({
+        google: {
+          families: ['Press Start 2P']
+        },
+        active: () => {
+          // Once the font is loaded, create UI text and start the game events
+          this.createUI();
+        }
+      });
+
+      // Create a group for moles (spawned later)
+      this.moles = this.physics.add.group();
+
+      // Spawn a mole every second
+      this.time.addEvent({
+        delay: 1000,
+        callback: this.spawnMole,
+        callbackScope: this,
+        loop: true
+      });
+    }
+
+    // Function to create UI elements after the font is loaded
+    createUI() {
       // Display the current score
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
         fontSize: '32px', 
@@ -77,17 +104,6 @@
             .setOrigin(0.5, 0.5);
           }
         },
-        callbackScope: this,
-        loop: true
-      });
-
-      // Create a group for moles
-      this.moles = this.physics.add.group();
-
-      // Spawn a mole every second
-      this.time.addEvent({
-        delay: 1000,
-        callback: this.spawnMole,
         callbackScope: this,
         loop: true
       });
