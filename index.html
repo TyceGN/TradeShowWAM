@@ -78,11 +78,12 @@
       });
 
       // Display timer using the Pixelify Sans font
-      this.timerText = this.add.text(310, 85, 'Time: ' + this.gameTime, { 
+      this.timerText = this.add.text(400, 80, 'Time: ' + this.gameTime, { 
         fontSize: '42px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305'
-      });
+      })
+      .setOrigin(0.5, 0.5);
 
       // Start timer countdown
       this.time.addEvent({
