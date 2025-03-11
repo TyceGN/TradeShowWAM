@@ -8,13 +8,16 @@
   <!-- Recommended Google Fonts links -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Load WebFont Loader -->
+  <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
   <style>
     body { margin: 0; }
   </style>
 </head>
 <body>
 <script>
+  // Define the GameScene class
   class GameScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GameScene' });
@@ -32,7 +35,7 @@
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
-      // Create UI elements now that the browser has loaded the fonts via the link tags
+      // Create UI elements (score and timer)
       this.createUI();
 
       // Create a group for moles (spawned later)
@@ -48,55 +51,55 @@
     }
 
     // Function to create UI elements
-createUI() {
-  // Display the current score using the Press Start 2P font
-  this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-    font: '32px "Press Start 2P"',
-    fill: '#fff'
-  });
+    createUI() {
+      // Display the current score using the Press Start 2P font
+      this.scoreText = this.add.text(16, 16, 'Score: 0', { 
+        font: '32px "Press Start 2P"',
+        fill: '#fff'
+      });
 
-  // Display timer in top right using the Press Start 2P font
-  this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
-    font: '45px "Press Start 2P"',
-    fill: '#f00'
-  });
+      // Display timer using the Press Start 2P font
+      this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
+        font: '45px "Press Start 2P"',
+        fill: '#f00'
+      });
 
-  // Start timer countdown
-  this.time.addEvent({
-    delay: 1000,
-    callback: () => {
-      this.gameTime--;
-      this.timerText.setText('Time: ' + this.gameTime);
-      if (this.gameTime <= 0) {
-        // End the game: stop mole spawns and show "Game Over"
-        this.time.removeAllEvents();
-        
-        // Define box dimensions
-        const boxWidth = 400;
-        const boxHeight = 150;
-        const boxX = (800 - boxWidth) / 2;
-        const boxY = (600 - boxHeight) / 2;
+      // Start timer countdown
+      this.time.addEvent({
+        delay: 1000,
+        callback: () => {
+          this.gameTime--;
+          this.timerText.setText('Time: ' + this.gameTime);
+          if (this.gameTime <= 0) {
+            // End the game: stop mole spawns and show "Game Over"
+            this.time.removeAllEvents();
+            
+            // Define box dimensions
+            const boxWidth = 400;
+            const boxHeight = 150;
+            const boxX = (800 - boxWidth) / 2;
+            const boxY = (600 - boxHeight) / 2;
 
-        // Create a white rectangle using a graphics object
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xffffff, 1);
-        graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-        graphics.lineStyle(2, 0xff0000, 1);
-        graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+            // Create a white rectangle using a graphics object
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xffffff, 1);
+            graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+            graphics.lineStyle(2, 0xff0000, 1);
+            graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-        // Add "Game Over!" text, centered over the white box
-        this.add.text(400, 300, 'Game Over!', { 
-          font: '48px "Press Start 2P"',
-          fill: '#f00',
-          fontStyle: 'bold'
-        })
-        .setOrigin(0.5, 0.5);
-      }
-    },
-    callbackScope: this,
-    loop: true
-  });
-}
+            // Add "Game Over!" text, centered over the white box
+            this.add.text(400, 300, 'Game Over!', { 
+              font: '48px "Press Start 2P"',
+              fill: '#f00',
+              fontStyle: 'bold'
+            })
+            .setOrigin(0.5, 0.5);
+          }
+        },
+        callbackScope: this,
+        loop: true
+      });
+    }
 
     spawnMole() {
       // Fixed coordinates for the 9 holes
@@ -167,11 +170,16 @@ createUI() {
     scene: [GameScene]
   };
 
-  // Create the game instance
-  const game = new Phaser.Game(config);
+  // Use WebFont.load to wait for the custom font to be active before starting the game
+  WebFont.load({
+    google: {
+      families: ['Press Start 2P']
+    },
+    active: function() {
+      // Create the Phaser game instance only after the font is loaded
+      const game = new Phaser.Game(config);
+    }
+  });
 </script>
-  <div style="font-family: 'Press Start 2P'; font-size: 32px; color: #fff; background: #000; padding: 10px;">
-  This is Press Start 2P
-</div>
 </body>
 </html>
