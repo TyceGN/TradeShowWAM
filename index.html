@@ -41,10 +41,23 @@
           this.gameTime--;
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
-            // End the game: stop mole spawns and show "Game Over"
-            this.time.removeAllEvents();
-            this.add.text(230, 300, 'Game Over!', { fontSize: '60px', fill: '#f00' });
-          }
+          // End the game: stop mole spawns and show "Game Over"
+          this.time.removeAllEvents();
+          // Define box dimensions
+          const boxWidth = 400;
+          const boxHeight = 150;
+          const boxX = (800 - boxWidth) / 2;
+          const boxY = (600 - boxHeight) / 2;
+
+          // Create a white rectangle using a graphics object
+          const graphics = this.add.graphics();
+          graphics.fillStyle(0xffffff, 1);
+          graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+          // Add "Game Over!" text, centered over the white box
+          this.add.text(400, 300, 'Game Over!', { fontSize: '48px', fill: '#f00' })
+            .setOrigin(0.5, 0.5);
+        }
         },
         callbackScope: this,
         loop: true
