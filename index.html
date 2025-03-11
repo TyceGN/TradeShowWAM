@@ -86,8 +86,12 @@
   // Game configuration
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+width: 800, // design width
+  height: 600, // design height
+  scale: {
+    mode: Phaser.Scale.FIT,          // Scale the game to fit the window while preserving aspect ratio
+    autoCenter: Phaser.Scale.CENTER_BOTH  // Center the game in the window
+  },
   physics: {
     default: 'arcade',
     arcade: {
