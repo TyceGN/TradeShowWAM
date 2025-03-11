@@ -17,7 +17,7 @@
     constructor() {
       super({ key: 'GameScene' });
       this.score = 0;
-      this.gameTime = 10; // 30-second timer
+      this.gameTime = 30; // 30-second timer
     }
 
     preload() {
@@ -34,14 +34,14 @@
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
         fontSize: '32px', 
         fill: '#fff',
-        fontFamily: 'Press Start 2P' // Retro font added
+        fontFamily: 'Press Start 2P'
       });
 
       // Display timer in top right
       this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
         fontSize: '45px', 
         fill: '#f00',
-        fontFamily: 'Press Start 2P' // Retro font added
+        fontFamily: 'Press Start 2P'
       });
 
       // Start timer countdown
@@ -51,32 +51,31 @@
           this.gameTime--;
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
-          
-          // End the game: stop mole spawns and show "Game Over"
-          this.time.removeAllEvents();
-          
-          // Define box dimensions
-          const boxWidth = 400;
-          const boxHeight = 150;
-          const boxX = (800 - boxWidth) / 2;
-          const boxY = (600 - boxHeight) / 2;
+            // End the game: stop mole spawns and show "Game Over"
+            this.time.removeAllEvents();
+            
+            // Define box dimensions
+            const boxWidth = 400;
+            const boxHeight = 150;
+            const boxX = (800 - boxWidth) / 2;
+            const boxY = (600 - boxHeight) / 2;
 
-          // Create a white rectangle using a graphics object
-          const graphics = this.add.graphics();
-          graphics.fillStyle(0xffffff, 1);
-          graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-          graphics.lineStyle(2, 0xff0000, 1);
-          graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+            // Create a white rectangle using a graphics object
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xffffff, 1);
+            graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+            graphics.lineStyle(2, 0xff0000, 1);
+            graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-          // Add "Game Over!" text, centered over the white box
-          this.add.text(400, 300, 'Game Over!', { 
-            fontSize: '48px', 
-            fill: '#f00', 
-            fontStyle: 'bold',
-            fontFamily: 'Press Start 2P' // Retro font added
-          })
+            // Add "Game Over!" text, centered over the white box
+            this.add.text(400, 300, 'Game Over!', { 
+              fontSize: '48px', 
+              fill: '#f00', 
+              fontStyle: 'bold',
+              fontFamily: 'Press Start 2P'
+            })
             .setOrigin(0.5, 0.5);
-        }
+          }
         },
         callbackScope: this,
         loop: true
@@ -123,6 +122,10 @@
         duration: 300,
       });
 
+      // Calculate mole duration based on remaining game time:
+      // At start (gameTime = 30) moles stay up for 1500ms, at end (gameTime = 0) they stay up for 800ms.
+      let moleDuration = 800 + (this.gameTime / 30) * (1500 - 800);
+
       // When the mole is clicked/tapped, increase score and remove it
       mole.on('pointerdown', () => {
         mole.destroy();
@@ -130,9 +133,9 @@
         this.scoreText.setText('Score: ' + this.score);
       });
 
-      // Automatically remove the mole after 800ms if not tapped
+      // Automatically remove the mole after the calculated duration if not tapped
       this.time.addEvent({
-        delay: 800,
+        delay: moleDuration,
         callback: () => {
           if (mole.active) mole.destroy();
         },
