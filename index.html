@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Whack-a-Mole</title>
+  <title>Whack-a-Mole Game</title>
   <!-- Load Phaser from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <style>
@@ -10,75 +10,89 @@
   </style>
 </head>
 <body>
-  <script>
-    // Configure the game: adjust width and height as needed
-    const config = {
-      type: Phaser.AUTO,
-      width: 800,
-      height: 600,
-      scene: { preload, create, update }
-    };
-
-    const game = new Phaser.Game(config);
-    let score = 0;
-    let scoreText;
-    let moles;  // group for mole sprites
-
-    function preload() {
-      // Load assets (replace these with your own image URLs or paths)
-      this.load.image('background', 'assets/background.png');  // Background image
-      this.load.image('mole', 'assets/mole.png');              // Mole image
+<script>
+  class GameScene extends Phaser.Scene {
+    constructor() {
+      super({ key: 'GameScene' });
+      this.score = 0;
     }
 
-    function create() {
-      // Add background
-      this.add.image(config.width/2, config.height/2, 'background');
+    preload() {
+      // Load your background and mole assets (update paths as needed)
+      this.load.image('background', 'assets/background.png');
+      this.load.image('mole', 'assets/mole.png');
+    }
 
-      // Display score
-      scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+    create() {
+      // Add the background centered on the canvas (assuming 800x600)
+      this.add.image(400, 300, 'background');
+
+      // Display the current score
+      this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
 
       // Create a group for moles
-      moles = this.physics.add.group();
+      this.moles = this.physics.add.group();
 
       // Spawn a mole every second
       this.time.addEvent({
         delay: 1000,
-        callback: spawnMole,
+        callback: this.spawnMole,
         callbackScope: this,
         loop: true
       });
     }
 
-    function spawnMole() {
-      // Pick a random position within the game bounds
-      const x = Phaser.Math.Between(100, config.width - 100);
-      const y = Phaser.Math.Between(100, config.height - 100);
-      
-      // Add the mole to the game and make it interactive
-      let mole = moles.create(x, y, 'mole').setInteractive();
+    spawnMole() {
+      // Fixed coordinates for the 9 holes
+      const holePositions = [
+        { x: 110, y: 506 },
+        { x: 385, y: 506 },
+        { x: 660, y: 506 },
+        { x: 130, y: 362 },
+        { x: 405, y: 362 },
+        { x: 684, y: 362 },
+        { x: 120, y: 252 },
+        { x: 395, y: 252 },
+        { x: 670, y: 252 }
+      ];
 
-      // When the mole is clicked/tapped, remove it and update the score
+      // Choose one random hole position
+      const hole = Phaser.Math.RND.pick(holePositions);
+
+      // Create a mole at the chosen position and set it interactive
+      let mole = this.moles.create(hole.x, hole.y, 'mole').setInteractive();
+
+      // Set the mole's origin to bottom center (0.5, 1) so its bottom aligns with the hole
+      mole.setOrigin(0.5, 1);
+
+      // When the mole is clicked/tapped, increase score and remove it
       mole.on('pointerdown', () => {
         mole.destroy();
-        score += 10;
-        scoreText.setText('Score: ' + score);
+        this.score += 10;
+        this.scoreText.setText('Score: ' + this.score);
       });
 
-      // Remove the mole automatically after a short delay if not whacked
+      // Automatically remove the mole after 800ms if not tapped
       this.time.addEvent({
         delay: 800,
         callback: () => {
-          if (mole.active) {
-            mole.destroy();
-          }
+          if (mole.active) mole.destroy();
         },
         callbackScope: this
       });
     }
+  }
 
-    function update() {
-      // Any continuous updates can go here
-    }
-  </script>
+  // Game configuration
+  const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    scene: [GameScene]
+  };
+
+  // Create the game instance
+  const game = new Phaser.Game(config);
+</script>
 </body>
 </html>
