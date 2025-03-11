@@ -41,8 +41,10 @@
           this.gameTime--;
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
+          
           // End the game: stop mole spawns and show "Game Over"
           this.time.removeAllEvents();
+          
           // Define box dimensions
           const boxWidth = 400;
           const boxHeight = 150;
@@ -53,9 +55,11 @@
           const graphics = this.add.graphics();
           graphics.fillStyle(0xffffff, 1);
           graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+          graphics.lineStyle(2, 0xff0000, 1);
+          graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
           // Add "Game Over!" text, centered over the white box
-          this.add.text(400, 300, 'Game Over!', { fontSize: '48px', fill: '#f00' })
+          this.add.text(400, 300, 'Game Over!', { fontSize: '48px', fill: '#f00', fontStyle: 'bold' })
             .setOrigin(0.5, 0.5);
         }
         },
@@ -92,11 +96,17 @@
       // Choose one random hole position
       const hole = Phaser.Math.RND.pick(holePositions);
 
-      // Create a mole at the chosen position and set it interactive
-      let mole = this.moles.create(hole.x, hole.y, 'mole').setInteractive();
+      // Create the mole a bit below its hole (e.g., 50 pixels lower)
+      let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
+      mole.setOrigin(0.5, 1); // bottom center is the anchor
 
-      // Set the mole's origin to bottom center (0.5, 1) so its bottom aligns with the hole
-      mole.setOrigin(0.5, 1);
+      // Tween the mole to "pop up" from below the hole to its final position
+      this.tweens.add({
+        targets: mole,
+        y: hole.y,           // target y-position (the hole center)
+        ease: 'Bounce.easeOut',
+        duration: 300,
+  });
 
       // When the mole is clicked/tapped, increase score and remove it
       mole.on('pointerdown', () => {
