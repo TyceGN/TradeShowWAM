@@ -13,6 +13,7 @@
   <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
   <style>
     body { margin: 0; }
+    canvas { image-rendering: pixelated; }
   </style>
 </head>
 <body>
@@ -35,6 +36,22 @@
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
+      // Initialize hole positions and occupancy tracking.
+      // These positions match your 9-hole grid.
+      this.holePositions = [
+        { x: 110, y: 506 },
+        { x: 385, y: 506 },
+        { x: 660, y: 506 },
+        { x: 130, y: 362 },
+        { x: 405, y: 362 },
+        { x: 684, y: 362 },
+        { x: 120, y: 252 },
+        { x: 395, y: 252 },
+        { x: 670, y: 252 }
+      ];
+      // Create an array to track occupancy: false means free.
+      this.holeOccupied = new Array(this.holePositions.length).fill(false);
+
       // Create UI elements (score and timer)
       this.createUI();
 
@@ -55,15 +72,13 @@
       console.log('Creating UI elements with Pixelify Sans');
       // Display the current score using the Pixelify Sans font
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-        fontSize: '32px',
-        fontFamily: '"Pixelify Sans"',
+        font: '32px "Pixelify Sans", sans-serif',
         fill: '#fff'
       });
 
       // Display timer using the Pixelify Sans font
       this.timerText = this.add.text(300, 80, 'Time: ' + this.gameTime, { 
-        fontSize: '45px',
-        fontFamily: '"Pixelify Sans"',
+        font: '45px "Pixelify Sans", sans-serif',
         fill: '#f00'
       });
 
@@ -92,8 +107,7 @@
 
             // Add "Game Over!" text, centered over the white box using Pixelify Sans
             this.add.text(400, 300, 'Game Over!', { 
-              fontSize: '48px',
-              fontFamily: '"Pixelify Sans"',
+              font: '48px "Pixelify Sans", sans-serif',
               fill: '#f00',
               fontStyle: 'bold'
             })
@@ -106,25 +120,31 @@
     }
 
     spawnMole() {
-      // Fixed coordinates for the 9 holes
-      const holePositions = [
-        { x: 110, y: 506 },
-        { x: 385, y: 506 },
-        { x: 660, y: 506 },
-        { x: 130, y: 362 },
-        { x: 405, y: 362 },
-        { x: 684, y: 362 },
-        { x: 120, y: 252 },
-        { x: 395, y: 252 },
-        { x: 670, y: 252 }
-      ];
+      // Build a list of indices for holes that are not currently occupied.
+      const freeHoleIndices = [];
+      for (let i = 0; i < this.holePositions.length; i++) {
+        if (!this.holeOccupied[i]) {
+          freeHoleIndices.push(i);
+        }
+      }
 
-      // Choose one random hole position
-      const hole = Phaser.Math.RND.pick(holePositions);
+      // If no holes are free, skip spawning.
+      if (freeHoleIndices.length === 0) {
+        return;
+      }
+
+      // Choose one free hole index at random.
+      const chosenIndex = Phaser.Math.RND.pick(freeHoleIndices);
+      // Mark the chosen hole as occupied.
+      this.holeOccupied[chosenIndex] = true;
+      const hole = this.holePositions[chosenIndex];
 
       // Create the mole a bit below its hole (e.g., 50 pixels lower)
       let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
-      mole.setOrigin(0.4, 1); // bottom center is the anchor
+      // Set the mole's origin to bottom center
+      mole.setOrigin(0.5, 1);
+      // Attach the chosen hole index to the mole so we can free it later.
+      mole.holeIndex = chosenIndex;
 
       // Tween the mole to "pop up" from below the hole to its final position
       this.tweens.add({
@@ -136,20 +156,28 @@
 
       // Calculate mole duration based on remaining game time:
       // At start (gameTime = 30) moles stay up for 1500ms, at end (gameTime = 0) they stay up for 800ms.
-      let moleDuration = 800 + (this.gameTime / 30) * (1500 - 800);
+      let moleDuration = 600 + (this.gameTime / 30) * (1500 - 600);
 
-      // When the mole is clicked/tapped, increase score and remove it
+      // When the mole is clicked/tapped, increase score, mark hole as free, and remove the mole
       mole.on('pointerdown', () => {
-        mole.destroy();
-        this.score += 10;
-        this.scoreText.setText('Score: ' + this.score);
+        if (mole.active) {
+          // Mark the hole as free before destroying the mole.
+          this.holeOccupied[mole.holeIndex] = false;
+          mole.destroy();
+          this.score += 10;
+          this.scoreText.setText('Score: ' + this.score);
+        }
       });
 
-      // Automatically remove the mole after the calculated duration if not tapped
+      // Automatically remove the mole after the calculated duration if not tapped,
+      // and free the hole so another mole can appear.
       this.time.addEvent({
         delay: moleDuration,
         callback: () => {
-          if (mole.active) mole.destroy();
+          if (mole.active) {
+            this.holeOccupied[mole.holeIndex] = false;
+            mole.destroy();
+          }
         },
         callbackScope: this
       });
@@ -188,4 +216,3 @@
 </script>
 </body>
 </html>
-
