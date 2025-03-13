@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html>
 <head>
   <meta charset="UTF-8">
@@ -24,6 +24,10 @@
       super({ key: 'GameScene' });
       this.score = 0;
       this.gameTime = 30; // 30-second timer
+      
+      // Feature 1: fixed total number of moles per game.
+      this.totalMolesToSpawn = 30; // Change this number as desired
+      this.totalMolesSpawned = 0;
     }
 
     preload() {
@@ -36,8 +40,7 @@
       // Add the background centered on the canvas (assuming 800x600)
       this.add.image(400, 300, 'background');
 
-      // Initialize hole positions and occupancy tracking.
-      // These positions match your 9-hole grid.
+      // Initialize hole positions and occupancy tracking (9-hole grid)
       this.holePositions = [
         { x: 110, y: 506 },
         { x: 385, y: 506 },
@@ -58,26 +61,21 @@
       // Create a group for moles (spawned later)
       this.moles = this.physics.add.group();
 
-      // Spawn a mole every second
-      this.time.addEvent({
-        delay: 1000,
-        callback: this.spawnMole,
-        callbackScope: this,
-        loop: true
-      });
+      // Schedule the first mole spawn
+      this.scheduleNextMole();
     }
 
     // Function to create UI elements
     createUI() {
       console.log('Creating UI elements with Pixelify Sans');
-      // Display the current score using the Pixelify Sans font
+      // Display the current score using Pixelify Sans
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
         fontSize: '32px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
       });
 
-      // Display timer using the Pixelify Sans font
+      // Display timer using Pixelify Sans
       this.timerText = this.add.text(400, 100, 'Time: ' + this.gameTime, { 
         fontSize: '42px',
         fontFamily: '"Pixelify Sans"',
@@ -92,7 +90,8 @@
           this.gameTime--;
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
-            // End the game: stop mole spawns and show "Game Over"
+            // End the game: stop further spawning and show "Game Over"
+            // Note: any scheduled spawn events may still run, so check totalMolesSpawned in spawnMole()
             this.time.removeAllEvents();
             
             // Define box dimensions
@@ -123,7 +122,32 @@
       });
     }
 
+    // Schedules the next mole spawn with a variable delay
+    scheduleNextMole() {
+      // Check if we've reached our fixed total of moles.
+      if (this.totalMolesSpawned >= this.totalMolesToSpawn) {
+        return;
+      }
+      // Determine a random delay (in ms) between spawns.
+      // You can adjust the range as desired.
+      let nextDelay = Phaser.Math.Between(500, 1500);
+      this.time.addEvent({
+        delay: nextDelay,
+        callback: this.spawnMole,
+        callbackScope: this,
+        loop: false
+      });
+    }
+
     spawnMole() {
+      // If we've already spawned the fixed total, don't spawn any more.
+      if (this.totalMolesSpawned >= this.totalMolesToSpawn) {
+        return;
+      }
+
+      // Increment the counter for moles spawned
+      this.totalMolesSpawned++;
+
       // Build a list of indices for holes that are not currently occupied.
       const freeHoleIndices = [];
       for (let i = 0; i < this.holePositions.length; i++) {
@@ -134,6 +158,8 @@
 
       // If no holes are free, skip spawning.
       if (freeHoleIndices.length === 0) {
+        // Even if no mole is spawned now, schedule the next spawn.
+        this.scheduleNextMole();
         return;
       }
 
@@ -145,7 +171,7 @@
 
       // Create the mole a bit below its hole (e.g., 50 pixels lower)
       let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
-      // Set the mole's origin to bottom center
+      // Set the mole's origin to bottom center (or nearly so)
       mole.setOrigin(0.45, 1);
       // Attach the chosen hole index to the mole so we can free it later.
       mole.holeIndex = chosenIndex;
@@ -185,6 +211,9 @@
         },
         callbackScope: this
       });
+
+      // Schedule the next mole spawn (if total not reached yet).
+      this.scheduleNextMole();
     }
   }
 
