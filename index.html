@@ -42,6 +42,7 @@
       this.load.image('mole4', 'assets/mole4.png');
       this.load.image('mole5', 'assets/mole5.png');
       this.load.image('mole6', 'assets/mole6.png');
+      this.load.image('mole6', 'assets/mole7.png');
       // Load background music files for each game length.
       this.load.audio('bgMusic30', 'assets/bgMusic30.mp3');
       this.load.audio('bgMusic45', 'assets/bgMusic45.mp3');
@@ -66,7 +67,7 @@
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
       // Initialize mole keys for multiple mole types.
-      this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
+      this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7'];
 
       // Create UI elements (score and timer).
       this.createUI();
