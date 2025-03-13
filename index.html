@@ -31,9 +31,9 @@
     }
 
     preload() {
-      // Load the background
+      // Load the background and mole assets.
       this.load.image('background', 'assets/background.png');
-      // Load multiple mole images for feature 4 (ensure these files exist)
+      // For multiple mole types (feature 4), load several mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
       this.load.image('mole3', 'assets/mole3.png');
@@ -58,10 +58,9 @@
         { x: 395, y: 252 },
         { x: 670, y: 252 }
       ];
-      // Track occupancy of each hole (false means free)
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
-      // Initialize the mole keys for multiple mole types
+      // Initialize the array for multiple mole types
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
 
       // Create UI elements (score and timer)
@@ -70,11 +69,11 @@
       // Create a group for moles
       this.moles = this.physics.add.group();
 
-      // Start the pre-game start sequence
-      this.startSequence();
+      // Show the start menu before the game begins.
+      this.startMenu();
     }
 
-    // Create UI elements: score and timer
+    // Create UI elements for score and timer.
     createUI() {
       console.log('Creating UI elements with Pixelify Sans');
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
@@ -89,36 +88,54 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Start sequence: flash "Ready", "Set", "Go" then delay 1s before game starts.
-    startSequence() {
-      const boxWidth = 400;
-      const boxHeight = 150;
+    // Start menu: display title and a "Start Game" button.
+    startMenu() {
+      // Create an overlay box.
+      const boxWidth = 600;
+      const boxHeight = 300;
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
       let graphics = this.add.graphics();
       graphics.fillStyle(0xffffff, 1);
       graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      graphics.lineStyle(2, 0xff0000, 1);
+      graphics.lineStyle(4, 0xff0000, 1);
       graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      let startText = this.add.text(400, 300, 'Ready', { 
-        fontSize: '60px',
+      // Title: "eG Innovations Presents:" in a smaller font.
+      let titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
+        fontSize: '24px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#000'
+      }).setOrigin(0.5, 0.5);
+
+      // Title: "IT Whack-A-Mole" in a larger, bold font.
+      let titleLarge = this.add.text(400, boxY + 120, 'IT Whack-A-Mole', { 
+        fontSize: '48px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
 
-      // Change text every second: Ready -> Set -> Go
-      this.time.addEvent({ delay: 1000, callback: () => { startText.setText('Set'); } });
-      this.time.addEvent({ delay: 2000, callback: () => { startText.setText('Go'); } });
-      this.time.addEvent({
-        delay: 3000,
-        callback: () => {
-          graphics.destroy();
-          startText.destroy();
-          // Delay 1 second, then start the game.
-          this.time.addEvent({ delay: 1000, callback: this.startGame, callbackScope: this });
-        }
+      // "Start Game" button at the bottom of the box.
+      let startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game', { 
+        fontSize: '36px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#F29305',
+        backgroundColor: '#000'
+      }).setOrigin(0.5, 0.5).setInteractive();
+
+      // When the Start Game button is clicked, remove the menu and delay 1 second before starting.
+      startButton.on('pointerdown', () => {
+        graphics.destroy();
+        titleSmall.destroy();
+        titleLarge.destroy();
+        startButton.destroy();
+        // 1-second delay before starting the game.
+        this.time.addEvent({
+          delay: 1000,
+          callback: this.startGame,
+          callbackScope: this
+        });
       });
     }
 
@@ -131,7 +148,11 @@
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
             this.time.removeAllEvents();
-            this.time.addEvent({ delay: 500, callback: this.showGameOver, callbackScope: this });
+            this.time.addEvent({
+              delay: 500,
+              callback: this.showGameOver,
+              callbackScope: this
+            });
           }
         },
         callbackScope: this,
@@ -140,7 +161,7 @@
       this.scheduleNextMole();
     }
 
-    // Display the Game Over UI.
+    // Display Game Over UI.
     showGameOver() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -160,12 +181,12 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Schedule the next mole spawn with a dynamic delay.
+    // Schedules the next mole spawn with a dynamic delay.
     scheduleNextMole() {
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
-      // Dynamic delay: maximum decreases from 1500ms to 500ms as gameTime goes from 30 to 0.
+      // Dynamic maximum delay decreases from 1500ms (at gameTime=30) to 500ms (at gameTime=0).
       let maxDelay = 500 + (this.gameTime / 30) * 1000;
       let nextDelay = Phaser.Math.Between(500, Math.floor(maxDelay));
       this.time.addEvent({
@@ -176,7 +197,7 @@
       });
     }
 
-    // Spawn a mole: choose a free hole and create a mole with a random type.
+    // Spawn a mole in a free hole with a random mole type.
     spawnMole() {
       if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
         return;
@@ -198,7 +219,7 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // Feature 4: pick a random mole type.
+      // Pick a random mole type (feature 4)
       const randomKey = Phaser.Math.RND.pick(this.moleKeys);
       let mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
       mole.setOrigin(0.45, 1);
@@ -253,7 +274,7 @@
     scene: [GameScene]
   };
 
-  // Load the custom font before starting the game.
+  // Use WebFont.load to ensure the custom font is loaded before starting the game.
   WebFont.load({
     google: { families: ['Pixelify Sans'] },
     active: function() {
