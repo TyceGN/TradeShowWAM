@@ -33,7 +33,7 @@
     preload() {
       // Load the background and mole assets.
       this.load.image('background', 'assets/background.png');
-      // For multiple mole types (feature 4), load several mole images.
+      // For feature 4: load multiple mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
       this.load.image('mole3', 'assets/mole3.png');
@@ -43,10 +43,10 @@
     }
 
     create() {
-      // Add the background (assuming 800x600)
+      // Add the background (assuming 800x600).
       this.add.image(400, 300, 'background');
 
-      // Initialize hole positions and occupancy tracking (9-hole grid)
+      // Initialize hole positions and occupancy tracking (9-hole grid).
       this.holePositions = [
         { x: 110, y: 506 },
         { x: 385, y: 506 },
@@ -60,16 +60,16 @@
       ];
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
-      // Initialize the array for multiple mole types
+      // Initialize mole keys for multiple mole types.
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
 
-      // Create UI elements (score and timer)
+      // Create UI elements (score and timer).
       this.createUI();
 
-      // Create a group for moles
+      // Create a group for moles.
       this.moles = this.physics.add.group();
 
-      // Show the start menu before the game begins.
+      // Show the start menu.
       this.startMenu();
     }
 
@@ -88,54 +88,86 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Start menu: display title and a "Start Game" button.
+    // Start menu: displays a title and a "Start Game" button.
     startMenu() {
-      // Create an overlay box.
       const boxWidth = 600;
       const boxHeight = 300;
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
-      let graphics = this.add.graphics();
-      graphics.fillStyle(0xffffff, 1);
-      graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      graphics.lineStyle(4, 0xff0000, 1);
-      graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+      this.menuGraphics = this.add.graphics();
+      this.menuGraphics.fillStyle(0xffffff, 1);
+      this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+      this.menuGraphics.lineStyle(4, 0xff0000, 1);
+      this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      // Title: "eG Innovations Presents:" in a smaller font.
-      let titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
+      // Title text (smaller)
+      this.titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000'
       }).setOrigin(0.5, 0.5);
 
-      // Title: "IT Whack-A-Mole" in a larger, bold font.
-      let titleLarge = this.add.text(400, boxY + 120, 'IT Whack-A-Mole', { 
+      // Main title text (larger, bold)
+      this.titleLarge = this.add.text(400, boxY + 120, 'IT Whack-A-Mole', { 
         fontSize: '48px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
 
-      // "Start Game" button at the bottom of the box.
-      let startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game', { 
+      // "Start Game" button at the bottom.
+      this.startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#000'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // When the Start Game button is clicked, remove the menu and delay 1 second before starting.
-      startButton.on('pointerdown', () => {
-        graphics.destroy();
-        titleSmall.destroy();
-        titleLarge.destroy();
-        startButton.destroy();
-        // 1-second delay before starting the game.
-        this.time.addEvent({
-          delay: 1000,
-          callback: this.startGame,
-          callbackScope: this
-        });
+      // When the Start Game button is clicked, remove the menu and begin the "Ready/Set/Go" sequence.
+      this.startButton.on('pointerdown', () => {
+        this.menuGraphics.destroy();
+        this.titleSmall.destroy();
+        this.titleLarge.destroy();
+        this.startButton.destroy();
+        // Start the Ready/Set/Go sequence.
+        this.startSequence();
+      });
+    }
+
+    // Start sequence: flash "Ready", then "Set", then "Go" in a box.
+    startSequence() {
+      const boxWidth = 400;
+      const boxHeight = 150;
+      const boxX = (800 - boxWidth) / 2;
+      const boxY = (600 - boxHeight) / 2;
+      this.sequenceGraphics = this.add.graphics();
+      this.sequenceGraphics.fillStyle(0xffffff, 1);
+      this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+      this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
+      this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+      this.sequenceText = this.add.text(400, 300, 'Ready', { 
+        fontSize: '60px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#000',
+        fontStyle: 'bold'
+      }).setOrigin(0.5, 0.5);
+
+      // Change text every second.
+      this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
+      this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
+      // After 3 seconds, remove the sequence and delay 1 second, then start the game.
+      this.time.addEvent({
+        delay: 3000,
+        callback: () => {
+          this.sequenceGraphics.destroy();
+          this.sequenceText.destroy();
+          this.time.addEvent({
+            delay: 1000,
+            callback: this.startGame,
+            callbackScope: this
+          });
+        }
       });
     }
 
@@ -181,12 +213,12 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Schedules the next mole spawn with a dynamic delay.
+    // Schedule the next mole spawn with a dynamic delay.
     scheduleNextMole() {
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
-      // Dynamic maximum delay decreases from 1500ms (at gameTime=30) to 500ms (at gameTime=0).
+      // Dynamic delay: maximum decreases from 1500ms at gameTime=30 to 500ms at gameTime=0.
       let maxDelay = 500 + (this.gameTime / 30) * 1000;
       let nextDelay = Phaser.Math.Between(500, Math.floor(maxDelay));
       this.time.addEvent({
@@ -197,14 +229,14 @@
       });
     }
 
-    // Spawn a mole in a free hole with a random mole type.
+    // Spawn a mole: choose a free hole and create a mole with a random type.
     spawnMole() {
       if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
         return;
       }
       this.totalMolesSpawned++;
 
-      // Build list of free holes.
+      // Build list of free hole indices.
       const freeHoleIndices = [];
       for (let i = 0; i < this.holePositions.length; i++) {
         if (!this.holeOccupied[i]) {
@@ -219,7 +251,7 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // Pick a random mole type (feature 4)
+      // Pick a random mole type.
       const randomKey = Phaser.Math.RND.pick(this.moleKeys);
       let mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
       mole.setOrigin(0.45, 1);
@@ -274,7 +306,7 @@
     scene: [GameScene]
   };
 
-  // Use WebFont.load to ensure the custom font is loaded before starting the game.
+  // Use WebFont.load to wait for the custom font to be active before starting the game.
   WebFont.load({
     google: { families: ['Pixelify Sans'] },
     active: function() {
@@ -285,3 +317,4 @@
 </script>
 </body>
 </html>
+
