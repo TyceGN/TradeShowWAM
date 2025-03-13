@@ -25,8 +25,8 @@
       this.score = 0;
       this.gameTime = 30; // 30-second timer
       
-      // Feature 1: fixed total number of moles per game.
-      this.totalMolesToSpawn = 30; // Change this number as desired
+      // Increase total moles to spawn (feature 3 adjustment)
+      this.totalMolesToSpawn = 40; // Increased from 30 to 40
       this.totalMolesSpawned = 0;
     }
 
@@ -130,15 +130,18 @@
       .setOrigin(0.5, 0.5);
     }
 
-    // Schedules the next mole spawn with a random delay.
+    // Schedules the next mole spawn with a dynamic delay based on remaining game time.
     scheduleNextMole() {
-      // If gameTime is 0 or less, do not schedule further spawns.
+      // Do not schedule if game is over or we've spawned all moles.
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
       
-      // Determine a random delay (in ms) between 500 and 1500.
-      let nextDelay = Phaser.Math.Between(500, 1500);
+      // Calculate a dynamic maximum delay.
+      // When gameTime = 30, maxDelay = 1500ms; when gameTime = 0, maxDelay = 500ms.
+      let maxDelay = 500 + (this.gameTime / 30) * 1000;
+      // Ensure a minimum delay of 500ms.
+      let nextDelay = Phaser.Math.Between(500, Math.floor(maxDelay));
       
       // Schedule the next mole spawn.
       this.time.addEvent({
@@ -193,7 +196,7 @@
         duration: 300,
       });
 
-      // Calculate mole duration based on remaining game time:
+      // Calculate mole duration based on remaining game time.
       let moleDuration = 600 + (this.gameTime / 30) * (1500 - 600);
 
       // When the mole is clicked/tapped, increase score, mark hole as free, and remove the mole.
