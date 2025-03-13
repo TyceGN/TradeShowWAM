@@ -33,7 +33,12 @@
     preload() {
       // Load your background and mole assets (update paths as needed)
       this.load.image('background', 'assets/background.png');
-      this.load.image('mole', 'assets/mole.png');
+      this.load.image('mole1', 'assets/mole1.png');
+      this.load.image('mole2', 'assets/mole2.png');
+      this.load.image('mole3', 'assets/mole3.png');
+      this.load.image('mole4', 'assets/mole4.png');
+      this.load.image('mole5', 'assets/mole5.png');
+      this.load.image('mole6', 'assets/mole6.png');
     }
 
     create() {
@@ -55,6 +60,9 @@
       // Create an array to track occupancy: false means free.
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
+      // Define the array of mole keys.
+      this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
+      
       // Create UI elements (score and timer)
       this.createUI();
 
@@ -181,8 +189,10 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // Create the mole a bit below its hole (e.g., 50 pixels lower)
-      let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
+      //Pick a random mole
+      const randomKey = Phaser.Math.RND.pick(this.moleKeys);
+      // Create the mole (variable randomKey) a bit below its hole (e.g., 50 pixels lower)
+      let mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
       // Set the mole's origin to bottom center (or nearly so)
       mole.setOrigin(0.45, 1);
       // Attach the chosen hole index to the mole so we can free it later.
