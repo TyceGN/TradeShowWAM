@@ -23,10 +23,12 @@
     constructor() {
       super({ key: 'GameScene' });
       this.score = 0;
-      this.gameTime = 30; // 30-second timer
+      // Default game duration is 30 seconds.
+      this.gameDuration = 30;
+      this.gameTime = this.gameDuration;
       
-      // Fixed total moles (features 1 & 3)
-      this.totalMolesToSpawn = 40; // Increased total
+      // Fixed total moles (features 1 & 3). Increase as desired.
+      this.totalMolesToSpawn = 40;
       this.totalMolesSpawned = 0;
     }
 
@@ -40,8 +42,9 @@
       this.load.image('mole4', 'assets/mole4.png');
       this.load.image('mole5', 'assets/mole5.png');
       this.load.image('mole6', 'assets/mole6.png');
-      // load background music and sounds
-      this.load.audio('bgMusic', 'assets/bgMusic.mp3');
+      // Load background music files for each game length.
+      this.load.audio('bgMusic30', 'assets/bgMusic30.mp3');
+      this.load.audio('bgMusic45', 'assets/bgMusic45.mp3');
     }
 
     create() {
@@ -90,26 +93,28 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Start menu: displays a title and a "Start Game" button.
+    // Start menu: displays the title box with "Start Game" button and an Admin button.
     startMenu() {
       const boxWidth = 600;
       const boxHeight = 300;
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
+      
+      // Draw the menu box.
       this.menuGraphics = this.add.graphics();
       this.menuGraphics.fillStyle(0xffffff, 1);
       this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
       this.menuGraphics.lineStyle(4, 0xff0000, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      // Title text (smaller)
+      // Title text (smaller).
       this.titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000'
       }).setOrigin(0.5, 0.5);
 
-      // Main title text (larger, bold)
+      // Main title text (larger, bold).
       this.titleLarge = this.add.text(400, boxY + 120, 'IT Whack-A-Mole', { 
         fontSize: '48px',
         fontFamily: '"Pixelify Sans"',
@@ -117,29 +122,59 @@
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
 
-      // "Start Game" button at the bottom.
-      this.startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game', { 
+      // "Start Game" button at the bottom, including the current game duration.
+      this.startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#000'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // When the Start Game button is clicked, remove the menu and begin the "Ready/Set/Go" sequence.
+      // Small Admin button in the upper right corner of the box.
+      this.adminButton = this.add.text(boxX + boxWidth - 40, boxY + 20, 'Admin', {
+        fontSize: '16px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#F29305',
+        backgroundColor: '#000'
+      }).setOrigin(0.5, 0.5).setInteractive();
+
+      // Admin button behavior.
+      this.adminButton.on('pointerdown', () => {
+        let pin = prompt("Enter 4-digit PIN:");
+        if (pin === "1122") {
+          let newDuration = prompt("Enter game duration in seconds (30 or 45):", this.gameDuration);
+          if (newDuration === "30" || newDuration === "45") {
+            this.gameDuration = parseInt(newDuration);
+            this.gameTime = this.gameDuration;
+            // Update the start button text to reflect the new duration.
+            this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
+          } else {
+            alert("Invalid duration. Keeping current setting.");
+          }
+        } else {
+          alert("Incorrect PIN.");
+        }
+      });
+
+      // When the Start Game button is clicked, remove the menu and begin the Ready/Set/Go sequence.
       this.startButton.on('pointerdown', () => {
         this.menuGraphics.destroy();
         this.titleSmall.destroy();
         this.titleLarge.destroy();
         this.startButton.destroy();
-        // Start background music here so it plays during the Ready/Set/Go sequence.
-        this.bgMusic = this.sound.add('bgMusic', { loop: true, volume: 0.5 });
+        this.adminButton.destroy();
+
+        // Start background music now (choose the appropriate track based on game duration).
+        let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+        this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
         this.bgMusic.play();
+
         // Start the Ready/Set/Go sequence.
         this.startSequence();
       });
     }
 
-    // Start sequence: flash "Ready", then "Set", then "Go" in a box.
+    // Start sequence: flash "Ready", "Set", "Go" in a box.
     startSequence() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -161,7 +196,7 @@
       // Change text every second.
       this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
       this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
-      // After 3 seconds, remove the sequence and delay 1 second, then start the game.
+      // After 3 seconds, remove the sequence and wait 1 second, then start the game.
       this.time.addEvent({
         delay: 3000,
         callback: () => {
@@ -295,7 +330,7 @@
     }
   }
 
-  // Game configuration
+  // Game configuration.
   const config = {
     type: Phaser.AUTO,
     width: 800,
@@ -322,4 +357,3 @@
 </script>
 </body>
 </html>
-
