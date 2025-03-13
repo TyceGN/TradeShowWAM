@@ -25,21 +25,25 @@
       this.score = 0;
       this.gameTime = 30; // 30-second timer
       
-      // Fixed total moles (feature 1, increased for feature 3)
-      this.totalMolesToSpawn = 40;
+      // Fixed total moles (features 1 & 3)
+      this.totalMolesToSpawn = 40; // Increased total
       this.totalMolesSpawned = 0;
     }
 
     preload() {
-      // Load your background and mole assets (update paths as needed)
+      // Load the background
       this.load.image('background', 'assets/background.png');
-      // For feature 4 (multiple mole types) you would load multiple mole images here.
-      // For now we assume a single image is loaded.
-      this.load.image('mole', 'assets/mole.png');
+      // Load multiple mole images for feature 4 (ensure these files exist)
+      this.load.image('mole1', 'assets/mole1.png');
+      this.load.image('mole2', 'assets/mole2.png');
+      this.load.image('mole3', 'assets/mole3.png');
+      this.load.image('mole4', 'assets/mole4.png');
+      this.load.image('mole5', 'assets/mole5.png');
+      this.load.image('mole6', 'assets/mole6.png');
     }
 
     create() {
-      // Add the background centered on the canvas (assuming 800x600)
+      // Add the background (assuming 800x600)
       this.add.image(400, 300, 'background');
 
       // Initialize hole positions and occupancy tracking (9-hole grid)
@@ -54,42 +58,39 @@
         { x: 395, y: 252 },
         { x: 670, y: 252 }
       ];
-      // Create an array to track occupancy: false means free.
+      // Track occupancy of each hole (false means free)
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
+
+      // Initialize the mole keys for multiple mole types
+      this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
 
       // Create UI elements (score and timer)
       this.createUI();
 
-      // Create a group for moles (spawned later)
+      // Create a group for moles
       this.moles = this.physics.add.group();
 
-      // Start the pre-game sequence
+      // Start the pre-game start sequence
       this.startSequence();
     }
 
-    // Function to create UI elements
+    // Create UI elements: score and timer
     createUI() {
       console.log('Creating UI elements with Pixelify Sans');
-      // Display the current score using Pixelify Sans
       this.scoreText = this.add.text(16, 16, 'Score: 0', { 
         fontSize: '32px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
       });
-
-      // Display timer using Pixelify Sans
-      // We'll update this text when the game starts.
       this.timerText = this.add.text(400, 100, 'Time: ' + this.gameTime, { 
         fontSize: '42px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305'
-      })
-      .setOrigin(0.5, 0.5);
+      }).setOrigin(0.5, 0.5);
     }
 
-    // Start sequence: flash "Ready", "Set", "Go" in a box, then delay 1 second before starting game.
+    // Start sequence: flash "Ready", "Set", "Go" then delay 1s before game starts.
     startSequence() {
-      // Create a box at the center (similar to Game Over box)
       const boxWidth = 400;
       const boxHeight = 150;
       const boxX = (800 - boxWidth) / 2;
@@ -100,7 +101,6 @@
       graphics.lineStyle(2, 0xff0000, 1);
       graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      // Create a text object centered in the box for the start sequence message
       let startText = this.add.text(400, 300, 'Ready', { 
         fontSize: '60px',
         fontFamily: '"Pixelify Sans"',
@@ -108,59 +108,39 @@
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
 
-      // After 1 second, change text to "Set"
-      this.time.addEvent({
-        delay: 1000,
-        callback: () => { startText.setText('Set'); }
-      });
-      // After 2 seconds, change text to "Go"
-      this.time.addEvent({
-        delay: 2000,
-        callback: () => { startText.setText('Go'); }
-      });
-      // After 3 seconds, remove the start sequence and wait 1 second before starting game
+      // Change text every second: Ready -> Set -> Go
+      this.time.addEvent({ delay: 1000, callback: () => { startText.setText('Set'); } });
+      this.time.addEvent({ delay: 2000, callback: () => { startText.setText('Go'); } });
       this.time.addEvent({
         delay: 3000,
         callback: () => {
           graphics.destroy();
           startText.destroy();
-          // 1 second delay, then start the game
-          this.time.addEvent({
-            delay: 1000,
-            callback: this.startGame,
-            callbackScope: this
-          });
+          // Delay 1 second, then start the game.
+          this.time.addEvent({ delay: 1000, callback: this.startGame, callbackScope: this });
         }
       });
     }
 
-    // Function that starts the game (timer countdown and mole spawns)
+    // Start the game: begin timer countdown and schedule mole spawns.
     startGame() {
-      // Start timer countdown event
       this.time.addEvent({
         delay: 1000,
         callback: () => {
           this.gameTime--;
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
-            // Stop all events and show Game Over after 500ms
             this.time.removeAllEvents();
-            this.time.addEvent({
-              delay: 500,
-              callback: this.showGameOver,
-              callbackScope: this
-            });
+            this.time.addEvent({ delay: 500, callback: this.showGameOver, callbackScope: this });
           }
         },
         callbackScope: this,
         loop: true
       });
-
-      // Schedule the first mole spawn
       this.scheduleNextMole();
     }
 
-    // Function to show Game Over UI
+    // Display the Game Over UI.
     showGameOver() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -180,16 +160,14 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Schedules the next mole spawn with a random delay (feature 2 & 3)
+    // Schedule the next mole spawn with a dynamic delay.
     scheduleNextMole() {
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
-      
-      // Dynamic maximum delay: decreases linearly from 1500ms at gameTime=30 to 500ms at gameTime=0.
+      // Dynamic delay: maximum decreases from 1500ms to 500ms as gameTime goes from 30 to 0.
       let maxDelay = 500 + (this.gameTime / 30) * 1000;
       let nextDelay = Phaser.Math.Between(500, Math.floor(maxDelay));
-      
       this.time.addEvent({
         delay: nextDelay,
         callback: this.spawnMole,
@@ -198,43 +176,43 @@
       });
     }
 
+    // Spawn a mole: choose a free hole and create a mole with a random type.
     spawnMole() {
       if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
         return;
       }
-      
       this.totalMolesSpawned++;
-      
-      // Build list of free hole indices
+
+      // Build list of free holes.
       const freeHoleIndices = [];
       for (let i = 0; i < this.holePositions.length; i++) {
         if (!this.holeOccupied[i]) {
           freeHoleIndices.push(i);
         }
       }
-      
       if (freeHoleIndices.length === 0) {
         this.scheduleNextMole();
         return;
       }
-      
       const chosenIndex = Phaser.Math.RND.pick(freeHoleIndices);
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
-      
-      let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
+
+      // Feature 4: pick a random mole type.
+      const randomKey = Phaser.Math.RND.pick(this.moleKeys);
+      let mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
       mole.setOrigin(0.45, 1);
       mole.holeIndex = chosenIndex;
-      
+
       this.tweens.add({
         targets: mole,
         y: hole.y,
         ease: 'Bounce.easeOut',
         duration: 300,
       });
-      
+
       let moleDuration = 600 + (this.gameTime / 30) * (1500 - 600);
-      
+
       mole.on('pointerdown', () => {
         if (mole.active) {
           this.holeOccupied[mole.holeIndex] = false;
@@ -243,7 +221,7 @@
           this.scoreText.setText('Score: ' + this.score);
         }
       });
-      
+
       this.time.addEvent({
         delay: moleDuration,
         callback: () => {
@@ -254,7 +232,7 @@
         },
         callbackScope: this
       });
-      
+
       this.scheduleNextMole();
     }
   }
@@ -262,8 +240,8 @@
   // Game configuration
   const config = {
     type: Phaser.AUTO,
-    width: 800, // design width
-    height: 600, // design height
+    width: 800,
+    height: 600,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
@@ -275,6 +253,7 @@
     scene: [GameScene]
   };
 
+  // Load the custom font before starting the game.
   WebFont.load({
     google: { families: ['Pixelify Sans'] },
     active: function() {
