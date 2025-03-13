@@ -25,20 +25,17 @@
       this.score = 0;
       this.gameTime = 30; // 30-second timer
       
-      // Increase total moles to spawn (feature 3 adjustment)
-      this.totalMolesToSpawn = 40; // Increased from 30 to 40
+      // Fixed total moles (feature 1, increased for feature 3)
+      this.totalMolesToSpawn = 40;
       this.totalMolesSpawned = 0;
     }
 
     preload() {
       // Load your background and mole assets (update paths as needed)
       this.load.image('background', 'assets/background.png');
-      this.load.image('mole1', 'assets/mole1.png');
-      this.load.image('mole2', 'assets/mole2.png');
-      this.load.image('mole3', 'assets/mole3.png');
-      this.load.image('mole4', 'assets/mole4.png');
-      this.load.image('mole5', 'assets/mole5.png');
-      this.load.image('mole6', 'assets/mole6.png');
+      // For feature 4 (multiple mole types) you would load multiple mole images here.
+      // For now we assume a single image is loaded.
+      this.load.image('mole', 'assets/mole.png');
     }
 
     create() {
@@ -60,38 +57,14 @@
       // Create an array to track occupancy: false means free.
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
-      // Define the array of mole keys.
-      this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6'];
-      
       // Create UI elements (score and timer)
       this.createUI();
 
       // Create a group for moles (spawned later)
       this.moles = this.physics.add.group();
 
-      // Schedule the first mole spawn
-      this.scheduleNextMole();
-
-      // Start timer countdown
-      this.time.addEvent({
-        delay: 1000,
-        callback: () => {
-          this.gameTime--;
-          this.timerText.setText('Time: ' + this.gameTime);
-          if (this.gameTime <= 0) {
-            // Stop all spawning events.
-            this.time.removeAllEvents();
-            // Wait an extra 500ms before showing "Game Over"
-            this.time.addEvent({
-              delay: 500,
-              callback: this.showGameOver,
-              callbackScope: this
-            });
-          }
-        },
-        callbackScope: this,
-        loop: true
-      });
+      // Start the pre-game sequence
+      this.startSequence();
     }
 
     // Function to create UI elements
@@ -105,6 +78,7 @@
       });
 
       // Display timer using Pixelify Sans
+      // We'll update this text when the game starts.
       this.timerText = this.add.text(400, 100, 'Time: ' + this.gameTime, { 
         fontSize: '42px',
         fontFamily: '"Pixelify Sans"',
@@ -113,45 +87,109 @@
       .setOrigin(0.5, 0.5);
     }
 
-    // Function to show Game Over UI
-    showGameOver() {
-      // Define box dimensions
+    // Start sequence: flash "Ready", "Set", "Go" in a box, then delay 1 second before starting game.
+    startSequence() {
+      // Create a box at the center (similar to Game Over box)
       const boxWidth = 400;
       const boxHeight = 150;
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
-
-      // Create a white rectangle using a graphics object
-      const graphics = this.add.graphics();
+      let graphics = this.add.graphics();
       graphics.fillStyle(0xffffff, 1);
       graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
       graphics.lineStyle(2, 0xff0000, 1);
       graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      // Add "Game Over!" text, centered over the white box using Pixelify Sans
+      // Create a text object centered in the box for the start sequence message
+      let startText = this.add.text(400, 300, 'Ready', { 
+        fontSize: '60px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#000',
+        fontStyle: 'bold'
+      }).setOrigin(0.5, 0.5);
+
+      // After 1 second, change text to "Set"
+      this.time.addEvent({
+        delay: 1000,
+        callback: () => { startText.setText('Set'); }
+      });
+      // After 2 seconds, change text to "Go"
+      this.time.addEvent({
+        delay: 2000,
+        callback: () => { startText.setText('Go'); }
+      });
+      // After 3 seconds, remove the start sequence and wait 1 second before starting game
+      this.time.addEvent({
+        delay: 3000,
+        callback: () => {
+          graphics.destroy();
+          startText.destroy();
+          // 1 second delay, then start the game
+          this.time.addEvent({
+            delay: 1000,
+            callback: this.startGame,
+            callbackScope: this
+          });
+        }
+      });
+    }
+
+    // Function that starts the game (timer countdown and mole spawns)
+    startGame() {
+      // Start timer countdown event
+      this.time.addEvent({
+        delay: 1000,
+        callback: () => {
+          this.gameTime--;
+          this.timerText.setText('Time: ' + this.gameTime);
+          if (this.gameTime <= 0) {
+            // Stop all events and show Game Over after 500ms
+            this.time.removeAllEvents();
+            this.time.addEvent({
+              delay: 500,
+              callback: this.showGameOver,
+              callbackScope: this
+            });
+          }
+        },
+        callbackScope: this,
+        loop: true
+      });
+
+      // Schedule the first mole spawn
+      this.scheduleNextMole();
+    }
+
+    // Function to show Game Over UI
+    showGameOver() {
+      const boxWidth = 400;
+      const boxHeight = 150;
+      const boxX = (800 - boxWidth) / 2;
+      const boxY = (600 - boxHeight) / 2;
+      let graphics = this.add.graphics();
+      graphics.fillStyle(0xffffff, 1);
+      graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+      graphics.lineStyle(2, 0xff0000, 1);
+      graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
       this.add.text(400, 300, 'Game Over!', { 
         fontSize: '60px',
         fontFamily: '"Pixelify Sans"',
         fill: '#f00',
         fontStyle: 'bold'
-      })
-      .setOrigin(0.5, 0.5);
+      }).setOrigin(0.5, 0.5);
     }
 
-    // Schedules the next mole spawn with a dynamic delay based on remaining game time.
+    // Schedules the next mole spawn with a random delay (feature 2 & 3)
     scheduleNextMole() {
-      // Do not schedule if game is over or we've spawned all moles.
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
       
-      // Calculate a dynamic maximum delay.
-      // When gameTime = 30, maxDelay = 1500ms; when gameTime = 0, maxDelay = 500ms.
+      // Dynamic maximum delay: decreases linearly from 1500ms at gameTime=30 to 500ms at gameTime=0.
       let maxDelay = 500 + (this.gameTime / 30) * 1000;
-      // Ensure a minimum delay of 500ms.
       let nextDelay = Phaser.Math.Between(500, Math.floor(maxDelay));
       
-      // Schedule the next mole spawn.
       this.time.addEvent({
         delay: nextDelay,
         callback: this.spawnMole,
@@ -161,55 +199,42 @@
     }
 
     spawnMole() {
-      // If we've already spawned the fixed total, don't spawn any more.
       if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
         return;
       }
-
-      // Increment the counter for moles spawned
+      
       this.totalMolesSpawned++;
-
-      // Build a list of indices for holes that are not currently occupied.
+      
+      // Build list of free hole indices
       const freeHoleIndices = [];
       for (let i = 0; i < this.holePositions.length; i++) {
         if (!this.holeOccupied[i]) {
           freeHoleIndices.push(i);
         }
       }
-
-      // If no holes are free, schedule the next spawn and exit.
+      
       if (freeHoleIndices.length === 0) {
         this.scheduleNextMole();
         return;
       }
-
-      // Choose one free hole index at random.
+      
       const chosenIndex = Phaser.Math.RND.pick(freeHoleIndices);
-      // Mark the chosen hole as occupied.
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
-
-      //Pick a random mole
-      const randomKey = Phaser.Math.RND.pick(this.moleKeys);
-      // Create the mole (variable randomKey) a bit below its hole (e.g., 50 pixels lower)
-      let mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
-      // Set the mole's origin to bottom center (or nearly so)
+      
+      let mole = this.moles.create(hole.x, hole.y + 50, 'mole').setInteractive();
       mole.setOrigin(0.45, 1);
-      // Attach the chosen hole index to the mole so we can free it later.
       mole.holeIndex = chosenIndex;
-
-      // Tween the mole to "pop up" from below the hole to its final position
+      
       this.tweens.add({
         targets: mole,
-        y: hole.y,           // target y-position (the hole center)
+        y: hole.y,
         ease: 'Bounce.easeOut',
         duration: 300,
       });
-
-      // Calculate mole duration based on remaining game time.
+      
       let moleDuration = 600 + (this.gameTime / 30) * (1500 - 600);
-
-      // When the mole is clicked/tapped, increase score, mark hole as free, and remove the mole.
+      
       mole.on('pointerdown', () => {
         if (mole.active) {
           this.holeOccupied[mole.holeIndex] = false;
@@ -218,9 +243,7 @@
           this.scoreText.setText('Score: ' + this.score);
         }
       });
-
-      // Automatically remove the mole after the calculated duration if not tapped,
-      // and free the hole so another mole can appear.
+      
       this.time.addEvent({
         delay: moleDuration,
         callback: () => {
@@ -231,8 +254,7 @@
         },
         callbackScope: this
       });
-
-      // Schedule the next mole spawn (if total not reached yet).
+      
       this.scheduleNextMole();
     }
   }
@@ -243,23 +265,18 @@
     width: 800, // design width
     height: 600, // design height
     scale: {
-      mode: Phaser.Scale.FIT,          // Scale the game to fit the window while preserving aspect ratio
-      autoCenter: Phaser.Scale.CENTER_BOTH  // Center the game in the window
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
     },
     physics: {
       default: 'arcade',
-      arcade: {
-        debug: false
-      }
+      arcade: { debug: false }
     },
     scene: [GameScene]
   };
 
-  // Use WebFont.load to wait for the custom font to be active before starting the game
   WebFont.load({
-    google: {
-      families: ['Pixelify Sans']
-    },
+    google: { families: ['Pixelify Sans'] },
     active: function() {
       console.log('Font loaded, creating game instance');
       const game = new Phaser.Game(config);
