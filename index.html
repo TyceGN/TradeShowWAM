@@ -131,6 +131,9 @@
         this.titleSmall.destroy();
         this.titleLarge.destroy();
         this.startButton.destroy();
+        // Start background music here so it plays during the Ready/Set/Go sequence.
+        this.bgMusic = this.sound.add('bgMusic', { loop: true, volume: 0.5 });
+        this.bgMusic.play();
         // Start the Ready/Set/Go sequence.
         this.startSequence();
       });
