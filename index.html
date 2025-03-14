@@ -1,13 +1,13 @@
 <!DOCTYPE html> 
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Whack-a-Mole Game</title>
   <!-- Function as a Web App on iOS devices -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="apple-touch-icon" href="assets/icon.png">
-  <meta charset="UTF-8">
   <!-- Load Phaser from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <!-- Recommended Google Fonts links for Pixelify Sans -->
@@ -31,15 +31,15 @@
       this.gameDuration = 30;
       this.gameTime = this.gameDuration;
       
-      // For 30s mode, total moles is 60; for 45s mode, it will be 90.
-      this.totalMolesToSpawn = 60;
+      // For 30s mode, total moles = 55; for 45s mode, total moles = 70.
+      this.totalMolesToSpawn = 55;
       this.totalMolesSpawned = 0;
     }
 
     preload() {
       // Load background and mole assets.
       this.load.image('background', 'assets/background.png');
-      // Good mole images.
+      // Load good mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
       this.load.image('mole3', 'assets/mole3.png');
@@ -52,8 +52,7 @@
       this.load.image('badmole2', 'assets/badmole2.png');
       this.load.image('badmole3', 'assets/badmole3.png');
       this.load.image('badmole4', 'assets/badmole4.png');
-      
-      // Load background music for 30s and 45s modes.
+      // Load background music.
       this.load.audio('bgMusic30', 'assets/bgMusic30.mp3');
       this.load.audio('bgMusic45', 'assets/bgMusic45.mp3');
       // Load additional sounds.
@@ -80,9 +79,8 @@
       ];
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
-      // Initialize mole keys for good moles.
+      // Initialize arrays for mole types.
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7'];
-      // Initialize bad mole keys.
       this.badMoleKeys = ['badmole1', 'badmole2', 'badmole3', 'badmole4'];
 
       // Create UI elements (score and timer).
@@ -109,55 +107,71 @@
       }).setOrigin(0.5, 0.5);
     }
 
+    // Start menu with high score display.
     startMenu() {
       const boxWidth = 600;
-      const boxHeight = 300;
+      const boxHeight = 400;
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
       
       this.menuGraphics = this.add.graphics();
       this.menuGraphics.fillStyle(0xffffff, 1);
       this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      this.menuGraphics.lineStyle(4, 0xF29305, 1); // Orange border.
+      // Border color is orange (#F29305).
+      this.menuGraphics.lineStyle(4, 0xF29305, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      this.titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
+      this.titleSmall = this.add.text(400, boxY + 40, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000'
       }).setOrigin(0.5, 0.5);
-      this.titleLarge = this.add.text(400, boxY + 120, 'IT Whack-A-Mole', { 
+      this.titleLarge = this.add.text(400, boxY + 80, 'IT Whack-A-Mole', { 
         fontSize: '48px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
 
-      // Start Game button: white text on an orange background.
-      this.startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game (' + this.gameDuration + ' seconds)', { 
+      // High score display.
+      this.highScoreDisplay = this.add.text(400, boxY + 140, this.displayHighScoresText(), {
+        fontSize: '20px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#000',
+        align: 'center'
+      }).setOrigin(0.5, 0.5);
+
+      // Start Game button: white text on a blue background (#0160E0).
+      this.startButton = this.add.text(400, boxY + boxHeight - 60, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
-        fill: '#fff',                   
-        backgroundColor: '#0160E0'      
+        fill: '#fff',
+        backgroundColor: '#0160E0'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // Admin button: orange text on a white background.
-      this.adminButton = this.add.text(boxX + boxWidth - 40, boxY + 20, 'Admin', {
+      // Two admin buttons.
+      this.gameLengthButton = this.add.text(boxX + boxWidth - 120, boxY + 20, 'Game Length', {
+        fontSize: '16px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#F29305',
+        backgroundColor: '#fff'
+      }).setOrigin(0.5, 0.5).setInteractive();
+      this.resetHSButton = this.add.text(boxX + boxWidth - 20, boxY + 20, 'Reset High Scores', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      this.adminButton.on('pointerdown', () => {
+      this.gameLengthButton.on('pointerdown', () => {
         let pin = prompt("Enter 4-digit PIN:");
         if (pin === "1122") {
           let newDuration = prompt("Enter game duration in seconds (30 or 45):", this.gameDuration);
           if (newDuration === "30" || newDuration === "45") {
             this.gameDuration = parseInt(newDuration);
             this.gameTime = this.gameDuration;
-            // Adjust total moles: 60 for 30s, 90 for 45s.
-            this.totalMolesToSpawn = (this.gameDuration === 30) ? 60 : 90;
+            // Set total moles: 55 for 30s, 70 for 45s.
+            this.totalMolesToSpawn = (this.gameDuration === 30) ? 55 : 70;
             this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
           } else {
             alert("Invalid duration. Keeping current setting.");
@@ -167,16 +181,27 @@
         }
       });
 
+      this.resetHSButton.on('pointerdown', () => {
+        let pin = prompt("Enter 4-digit PIN:");
+        if (pin === "1122") {
+          localStorage.removeItem('highScores');
+          alert("High scores have been reset.");
+          this.highScoreDisplay.setText(this.displayHighScoresText());
+        } else {
+          alert("Incorrect PIN.");
+        }
+      });
+
       this.startButton.on('pointerdown', () => {
         this.menuGraphics.destroy();
         this.titleSmall.destroy();
         this.titleLarge.destroy();
+        this.highScoreDisplay.destroy();
         this.startButton.destroy();
-        this.adminButton.destroy();
+        this.gameLengthButton.destroy();
+        this.resetHSButton.destroy();
         
-        // Play the start sound.
         this.sound.play('startsound');
-        // After 1 second, start background music and the Ready/Set/Go sequence.
         this.time.addEvent({
           delay: 1000,
           callback: () => {
@@ -188,6 +213,52 @@
           callbackScope: this
         });
       });
+    }
+
+    displayHighScoresText() {
+      let scores = this.getHighScores();
+      let text = "";
+      if (scores.length > 0) {
+        text += "Daily High Score: " + scores[0].name + " - " + scores[0].company + "\n";
+        if (scores.length > 1) {
+          text += "Runner-up winners:\n";
+          for (let i = 1; i < scores.length; i++) {
+            text += i + " - " + scores[i].name + " - " + scores[i].company + "\n";
+          }
+        }
+      } else {
+        text = "No high scores yet.";
+      }
+      return text;
+    }
+
+    getHighScores() {
+      let scores = localStorage.getItem('highScores');
+      if (scores) return JSON.parse(scores);
+      return [];
+    }
+
+    saveHighScores(scores) {
+      localStorage.setItem('highScores', JSON.stringify(scores));
+    }
+
+    updateHighScores(newScore, name, company) {
+      let scores = this.getHighScores();
+      scores.push({ score: newScore, name: name, company: company });
+      scores.sort((a, b) => b.score - a.score);
+      if (scores.length > 6) scores = scores.slice(0, 6);
+      this.saveHighScores(scores);
+      return scores;
+    }
+
+    checkHighScoreAndPrompt() {
+      let scores = this.getHighScores();
+      if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
+        let name = prompt("New high score! Enter your first name and last initial:");
+        let company = prompt("Enter your company name:");
+        scores = this.updateHighScores(this.score, name, company);
+        alert("High score recorded!");
+      }
     }
 
     startSequence() {
@@ -236,7 +307,10 @@
             this.sound.play('gameoverSound');
             this.time.addEvent({
               delay: 500,
-              callback: this.showGameOver,
+              callback: () => {
+                this.showGameOver();
+                this.checkHighScoreAndPrompt();
+              },
               callbackScope: this
             });
           }
@@ -303,7 +377,7 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // 20% chance the mole is bad.
+      // 20% chance to spawn a bad mole.
       let isBad = Phaser.Math.FloatBetween(0, 1) < 0.2;
       let mole;
       if (isBad) {
@@ -332,9 +406,9 @@
           this.sound.play('whacksound', { volume: 0.5 });
           this.holeOccupied[mole.holeIndex] = false;
           mole.destroy();
-          // Adjust score: +10 for good mole, -10 for bad mole.
+          // +10 for good mole, -5 for bad mole.
           if (mole.isBad) {
-            this.score -= 10;
+            this.score -= 5;
           } else {
             this.score += 10;
           }
