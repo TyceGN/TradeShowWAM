@@ -25,7 +25,8 @@
       // Default game duration is 30 seconds.
       this.gameDuration = 30;
       this.gameTime = this.gameDuration;
-      // For 30s mode, total moles is now 60; for 45s mode, 90.
+      
+      // For 30s mode, total moles is 60; for 45s mode, it will be 90.
       this.totalMolesToSpawn = 60;
       this.totalMolesSpawned = 0;
     }
@@ -41,9 +42,13 @@
       this.load.image('mole5', 'assets/mole5.png');
       this.load.image('mole6', 'assets/mole6.png');
       this.load.image('mole7', 'assets/mole7.png');
-      // Load a bad mole image.
-      this.load.image('badmole', 'assets/badmole.png');
-      // Load background music.
+      // Load bad mole images.
+      this.load.image('badmole1', 'assets/badmole1.png');
+      this.load.image('badmole2', 'assets/badmole2.png');
+      this.load.image('badmole3', 'assets/badmole3.png');
+      this.load.image('badmole4', 'assets/badmole4.png');
+      
+      // Load background music for 30s and 45s modes.
       this.load.audio('bgMusic30', 'assets/bgMusic30.mp3');
       this.load.audio('bgMusic45', 'assets/bgMusic45.mp3');
       // Load additional sounds.
@@ -53,7 +58,7 @@
     }
 
     create() {
-      // Add the background.
+      // Add the background (assuming 800x600).
       this.add.image(400, 300, 'background');
 
       // Updated hole positions.
@@ -72,6 +77,8 @@
 
       // Initialize mole keys for good moles.
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7'];
+      // Initialize bad mole keys.
+      this.badMoleKeys = ['badmole1', 'badmole2', 'badmole3', 'badmole4'];
 
       // Create UI elements (score and timer).
       this.createUI();
@@ -97,7 +104,6 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Start menu with title, Start Game button, and Admin button.
     startMenu() {
       const boxWidth = 600;
       const boxHeight = 300;
@@ -110,7 +116,6 @@
       this.menuGraphics.lineStyle(4, 0xF29305, 1); // Orange border.
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      // Title texts.
       this.titleSmall = this.add.text(400, boxY + 50, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
@@ -139,7 +144,6 @@
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // Admin button behavior.
       this.adminButton.on('pointerdown', () => {
         let pin = prompt("Enter 4-digit PIN:");
         if (pin === "1122") {
@@ -149,7 +153,6 @@
             this.gameTime = this.gameDuration;
             // Adjust total moles: 60 for 30s, 90 for 45s.
             this.totalMolesToSpawn = (this.gameDuration === 30) ? 60 : 90;
-            // Update the start button text.
             this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
           } else {
             alert("Invalid duration. Keeping current setting.");
@@ -159,8 +162,6 @@
         }
       });
 
-      // When the Start Game button is tapped, play the start sound.
-      // Then, after 1 second (to allow the sound to finish), start the Ready/Set/Go sequence and background music.
       this.startButton.on('pointerdown', () => {
         this.menuGraphics.destroy();
         this.titleSmall.destroy();
@@ -168,7 +169,9 @@
         this.startButton.destroy();
         this.adminButton.destroy();
         
+        // Play the start sound.
         this.sound.play('startsound');
+        // After 1 second, start background music and the Ready/Set/Go sequence.
         this.time.addEvent({
           delay: 1000,
           callback: () => {
@@ -182,7 +185,6 @@
       });
     }
 
-    // Ready/Set/Go sequence.
     startSequence() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -217,7 +219,6 @@
       });
     }
 
-    // Start game: begin timer countdown and schedule mole spawns.
     startGame() {
       this.initialGameTime = this.gameTime;
       this.time.addEvent({
@@ -241,7 +242,6 @@
       this.scheduleNextMole();
     }
 
-    // Game Over UI.
     showGameOver() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -261,12 +261,10 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Schedule the next mole spawn with a dynamic delay.
     scheduleNextMole() {
       if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
         return;
       }
-      // Use a minimum delay of 300ms and a maximum that scales from 1500ms at the start to 300ms at the end.
       let minDelay = 300;
       let maxDelay = 1500;
       let currentMax = minDelay + (this.gameTime / this.initialGameTime) * (maxDelay - minDelay);
@@ -279,14 +277,12 @@
       });
     }
 
-    // Spawn a mole: choose a free hole and randomly decide if it's good or bad.
     spawnMole() {
       if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
         return;
       }
       this.totalMolesSpawned++;
 
-      // Build list of free hole indices.
       const freeHoleIndices = [];
       for (let i = 0; i < this.holePositions.length; i++) {
         if (!this.holeOccupied[i]) {
@@ -301,11 +297,12 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // Decide if this mole is "bad" (20% chance).
+      // 20% chance the mole is bad.
       let isBad = Phaser.Math.FloatBetween(0, 1) < 0.2;
       let mole;
       if (isBad) {
-        mole = this.moles.create(hole.x, hole.y + 50, 'badmole').setInteractive();
+        const badKey = Phaser.Math.RND.pick(this.badMoleKeys);
+        mole = this.moles.create(hole.x, hole.y + 50, badKey).setInteractive();
         mole.isBad = true;
       } else {
         const randomKey = Phaser.Math.RND.pick(this.moleKeys);
@@ -322,7 +319,6 @@
         duration: 300,
       });
 
-      // Calculate mole duration based on remaining game time.
       let moleDuration = 600 + (this.gameTime / this.initialGameTime) * (1500 - 600);
 
       mole.on('pointerdown', () => {
@@ -332,7 +328,7 @@
           mole.destroy();
           // Adjust score: +10 for good mole, -10 for bad mole.
           if (mole.isBad) {
-            this.score -= 5;
+            this.score -= 10;
           } else {
             this.score += 10;
           }
@@ -355,7 +351,6 @@
     }
   }
 
-  // Game configuration.
   const config = {
     type: Phaser.AUTO,
     width: 800,
