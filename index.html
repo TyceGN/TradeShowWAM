@@ -185,7 +185,7 @@
       }).setOrigin(0.5, 0.5);
 
       // High score display.
-      this.highScoreDisplay = this.add.text(400, boxY + 180, this.displayHighScoresText(), {
+      this.highScoreDisplay = this.add.text(400, boxY + 200, this.displayHighScoresText(), {
         fontSize: '20px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
@@ -201,14 +201,14 @@
       }).setOrigin(0.5, 0.5).setInteractive();
 
       // Place admin buttons in the top corners of the box.
-      this.gameLengthButton = this.add.text(boxX + 20, boxY + 20, 'Game Length', {
+      this.gameLengthButton = this.add.text(boxX + 60, boxY + 20, 'Game Length', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      this.resetHSButton = this.add.text(boxX + boxWidth - 20, boxY + 20, 'Reset High Scores', {
+      this.resetHSButton = this.add.text(boxX + boxWidth - 60, boxY + 20, 'Reset High Scores', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
