@@ -30,7 +30,6 @@
       // Default game duration is 30 seconds.
       this.gameDuration = 30;
       this.gameTime = this.gameDuration;
-      
       // For 30s mode, total moles = 55; for 45s mode, total moles = 70.
       this.totalMolesToSpawn = 55;
       this.totalMolesSpawned = 0;
@@ -59,6 +58,7 @@
       this.load.audio('startsound', 'assets/startsound.mp3');
       this.load.audio('gameoverSound', 'assets/gameover.mp3');
       this.load.audio('whacksound', 'assets/whacksound.mp3');
+      this.load.audio('highscore', 'assets/highscore.mp3');
     }
 
     create() {
@@ -83,7 +83,7 @@
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7'];
       this.badMoleKeys = ['badmole1', 'badmole2', 'badmole3', 'badmole4'];
 
-      // Create UI elements (score and timer).
+      // Create UI elements.
       this.createUI();
 
       // Create a group for moles.
@@ -107,7 +107,59 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // Start menu with high score display.
+    // High score functions.
+    getHighScores() {
+      let scores = localStorage.getItem('highScores');
+      if (scores) return JSON.parse(scores);
+      return [];
+    }
+
+    saveHighScores(scores) {
+      localStorage.setItem('highScores', JSON.stringify(scores));
+    }
+
+    updateHighScores(newScore, name, company) {
+      let scores = this.getHighScores();
+      scores.push({ score: newScore, name: name, company: company });
+      scores.sort((a, b) => b.score - a.score);
+      if (scores.length > 6) scores = scores.slice(0, 6);
+      this.saveHighScores(scores);
+      return scores;
+    }
+
+    displayHighScoresText() {
+      let scores = this.getHighScores();
+      let text = "";
+      // Always display 6 slots.
+      // Slot 1: Daily High Score.
+      text += "Daily High Score: ";
+      if (scores[0]) {
+        text += scores[0].name + " - " + scores[0].company + "\n";
+      } else {
+        text += "---\n";
+      }
+      text += "Runner-up winners:\n";
+      for (let i = 1; i < 6; i++) {
+        if (scores[i]) {
+          text += i + " - " + scores[i].name + " - " + scores[i].company + "\n";
+        } else {
+          text += i + " - ---\n";
+        }
+      }
+      return text;
+    }
+
+    checkHighScoreAndPrompt() {
+      let scores = this.getHighScores();
+      if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
+        let name = prompt("New high score! Enter your first name and last initial:");
+        let company = prompt("Enter your company name:");
+        scores = this.updateHighScores(this.score, name, company);
+        alert("High score recorded!");
+      }
+    }
+
+    // Start menu: displays the title box with high scores and admin buttons.
     startMenu() {
       const boxWidth = 600;
       const boxHeight = 400;
@@ -117,7 +169,6 @@
       this.menuGraphics = this.add.graphics();
       this.menuGraphics.fillStyle(0xffffff, 1);
       this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      // Border color is orange (#F29305).
       this.menuGraphics.lineStyle(4, 0xF29305, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
@@ -141,7 +192,7 @@
         align: 'center'
       }).setOrigin(0.5, 0.5);
 
-      // Start Game button: white text on a blue background (#0160E0).
+      // "Start Game" button: white text on blue (#0160E0) background.
       this.startButton = this.add.text(400, boxY + boxHeight - 60, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
@@ -149,14 +200,15 @@
         backgroundColor: '#0160E0'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // Two admin buttons.
-      this.gameLengthButton = this.add.text(boxX + boxWidth - 120, boxY + 20, 'Game Length', {
+      // Place admin buttons in the top corners of the box.
+      this.gameLengthButton = this.add.text(boxX + 40, boxY + 20, 'Game Length', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
-      this.resetHSButton = this.add.text(boxX + boxWidth - 20, boxY + 20, 'Reset High Scores', {
+
+      this.resetHSButton = this.add.text(boxX + boxWidth - 40, boxY + 20, 'Reset High Scores', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
@@ -215,52 +267,6 @@
       });
     }
 
-    displayHighScoresText() {
-      let scores = this.getHighScores();
-      let text = "";
-      if (scores.length > 0) {
-        text += "Daily High Score: " + scores[0].name + " - " + scores[0].company + "\n";
-        if (scores.length > 1) {
-          text += "Runner-up winners:\n";
-          for (let i = 1; i < scores.length; i++) {
-            text += i + " - " + scores[i].name + " - " + scores[i].company + "\n";
-          }
-        }
-      } else {
-        text = "No high scores yet.";
-      }
-      return text;
-    }
-
-    getHighScores() {
-      let scores = localStorage.getItem('highScores');
-      if (scores) return JSON.parse(scores);
-      return [];
-    }
-
-    saveHighScores(scores) {
-      localStorage.setItem('highScores', JSON.stringify(scores));
-    }
-
-    updateHighScores(newScore, name, company) {
-      let scores = this.getHighScores();
-      scores.push({ score: newScore, name: name, company: company });
-      scores.sort((a, b) => b.score - a.score);
-      if (scores.length > 6) scores = scores.slice(0, 6);
-      this.saveHighScores(scores);
-      return scores;
-    }
-
-    checkHighScoreAndPrompt() {
-      let scores = this.getHighScores();
-      if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
-        let name = prompt("New high score! Enter your first name and last initial:");
-        let company = prompt("Enter your company name:");
-        scores = this.updateHighScores(this.score, name, company);
-        alert("High score recorded!");
-      }
-    }
-
     startSequence() {
       const boxWidth = 400;
       const boxHeight = 150;
@@ -304,13 +310,10 @@
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
             this.time.removeAllEvents();
-            this.sound.play('gameoverSound');
+            // End-of-game handling.
             this.time.addEvent({
               delay: 500,
-              callback: () => {
-                this.showGameOver();
-                this.checkHighScoreAndPrompt();
-              },
+              callback: this.handleEndOfGame,
               callbackScope: this
             });
           }
@@ -321,24 +324,35 @@
       this.scheduleNextMole();
     }
 
-    showGameOver() {
-      this.moles.clear(true, true);
-      const boxWidth = 400;
-      const boxHeight = 150;
-      const boxX = (800 - boxWidth) / 2;
-      const boxY = (600 - boxHeight) / 2;
-      let graphics = this.add.graphics();
-      graphics.fillStyle(0xffffff, 1);
-      graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      graphics.lineStyle(2, 0xff0000, 1);
-      graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+    handleEndOfGame() {
+      let scores = this.getHighScores();
+      let qualifies = (scores.length < 6 || this.score > scores[scores.length - 1].score);
+      if (qualifies) {
+        this.sound.play('highscore', { volume: 0.5 });
+        this.add.text(400, 300, 'NEW HIGH SCORE!', { 
+          fontSize: '60px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#0160E0',
+          fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5);
+        this.time.addEvent({
+          delay: 1500,
+          callback: () => { this.checkHighScoreAndPrompt(); },
+          callbackScope: this
+        });
+      } else {
+        this.sound.play('gameoverSound', { volume: 0.5 });
+        this.add.text(400, 300, 'Game Over!', { 
+          fontSize: '60px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#f00',
+          fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5);
+      }
+    }
 
-      this.add.text(400, 300, 'Game Over!', { 
-        fontSize: '60px',
-        fontFamily: '"Pixelify Sans"',
-        fill: '#f00',
-        fontStyle: 'bold'
-      }).setOrigin(0.5, 0.5);
+    showGameOver() {
+      // Not used now; handleEndOfGame() does the job.
     }
 
     scheduleNextMole() {
@@ -377,7 +391,7 @@
       this.holeOccupied[chosenIndex] = true;
       const hole = this.holePositions[chosenIndex];
 
-      // 20% chance to spawn a bad mole.
+      // 20% chance for a bad mole.
       let isBad = Phaser.Math.FloatBetween(0, 1) < 0.2;
       let mole;
       if (isBad) {
@@ -406,7 +420,6 @@
           this.sound.play('whacksound', { volume: 0.5 });
           this.holeOccupied[mole.holeIndex] = false;
           mole.destroy();
-          // +10 for good mole, -5 for bad mole.
           if (mole.isBad) {
             this.score -= 5;
           } else {
