@@ -186,7 +186,7 @@
       
       // High score box background.
       let highScoreBoxWidth = 450; // Fixed width for clean look.
-      let highScoreBoxHeight = 80; // Fixed height.
+      let highScoreBoxHeight = 160; // Fixed height.
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x000000, 1);
       this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 240 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
@@ -334,7 +334,7 @@
       let scores = this.getHighScores();
       let qualifies = (scores.length < 6 || this.score > scores[scores.length - 1].score);
       if (qualifies) {
-        this.sound.play('highscore', { volume: 0.5 });
+        this.sound.play('highscore', { volume: 0.6 });
         this.add.text(400, 300, 'NEW HIGH SCORE!', { 
           fontSize: '60px',
           fontFamily: '"Pixelify Sans"',
