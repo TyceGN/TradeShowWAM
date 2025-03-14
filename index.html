@@ -108,7 +108,7 @@
       this.menuGraphics = this.add.graphics();
       this.menuGraphics.fillStyle(0xffffff, 1);
       this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      this.menuGraphics.lineStyle(4, 0xff0000, 1);
+      this.menuGraphics.lineStyle(4, 0xf29305, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
       // Title text (smaller)
@@ -130,16 +130,17 @@
       this.startButton = this.add.text(400, boxY + boxHeight - 50, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
-        fill: '#F29305',
-        backgroundColor: '#000'
+        fill: '#fff',                   // white text
+        backgroundColor: '#F29305'      // orange background
       }).setOrigin(0.5, 0.5).setInteractive();
+
 
       // "Admin" button in the upper right corner.
       this.adminButton = this.add.text(boxX + boxWidth - 40, boxY + 20, 'Admin', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
-        fill: '#F29305',
-        backgroundColor: '#000'
+        fill: '#F29305',                // orange text
+        backgroundColor: '#fff'         // white background
       }).setOrigin(0.5, 0.5).setInteractive();
 
       // Admin button behavior.
