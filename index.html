@@ -172,12 +172,12 @@
       this.menuGraphics.lineStyle(4, 0xF29305, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      this.titleSmall = this.add.text(400, boxY + 40, 'eG Innovations Presents:', { 
+      this.titleSmall = this.add.text(400, boxY + 60, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000'
       }).setOrigin(0.5, 0.5);
-      this.titleLarge = this.add.text(400, boxY + 80, 'IT Whack-A-Mole', { 
+      this.titleLarge = this.add.text(400, boxY + 100, 'IT Whack-A-Mole', { 
         fontSize: '48px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
@@ -185,7 +185,7 @@
       }).setOrigin(0.5, 0.5);
 
       // High score display.
-      this.highScoreDisplay = this.add.text(400, boxY + 220, this.displayHighScoresText(), {
+      this.highScoreDisplay = this.add.text(400, boxY + 240, this.displayHighScoresText(), {
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#000',
@@ -193,7 +193,7 @@
       }).setOrigin(0.5, 0.5);
 
       // "Start Game" button: white text on blue (#0160E0) background.
-      this.startButton = this.add.text(400, boxY + boxHeight - 60, 'Start Game (' + this.gameDuration + ' seconds)', { 
+      this.startButton = this.add.text(400, boxY + boxHeight - 40, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
