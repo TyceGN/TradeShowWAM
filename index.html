@@ -183,12 +183,18 @@
         fill: '#000',
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
-
-      // High score display.
+      
+      // High score box background.
+      let highScoreBoxWidth = 450; // Fixed width for clean look.
+      let highScoreBoxHeight = 80; // Fixed height.
+      this.highScoreBox = this.add.graphics();
+      this.highScoreBox.fillStyle(0x000000, 1);
+      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 240 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+      // High score display text on top, white text.
       this.highScoreDisplay = this.add.text(400, boxY + 240, this.displayHighScoresText(), {
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
-        fill: '#000',
+        fill: '#fff',
         align: 'center'
       }).setOrigin(0.5, 0.5);
 
