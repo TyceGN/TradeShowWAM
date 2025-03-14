@@ -62,7 +62,7 @@
     }
 
     create() {
-      // Add the background (assuming 800x600).
+      // Add the background.
       this.add.image(400, 300, 'background');
 
       // Updated hole positions.
@@ -131,7 +131,6 @@
       let scores = this.getHighScores();
       let text = "";
       // Always display 6 slots.
-      // Slot 1: Daily High Score.
       text += "Daily High Score: ";
       if (scores[0]) {
         text += scores[0].name + " - " + scores[0].company + "\n";
@@ -157,9 +156,11 @@
         scores = this.updateHighScores(this.score, name, company);
         alert("High score recorded!");
       }
+      // Return to main menu.
+      this.scene.restart();
     }
 
-    // Start menu: displays the title box with high scores and admin buttons.
+    // Start menu: displays title, high scores, and admin buttons.
     startMenu() {
       const boxWidth = 600;
       const boxHeight = 400;
@@ -184,13 +185,16 @@
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
       
-      // High score box background.
-      let highScoreBoxWidth = 450; // Fixed width for clean look.
-      let highScoreBoxHeight = 190; // Fixed height.
+      // High score box background (blue with an orange border).
+      let highScoreBoxWidth = 450;
+      let highScoreBoxHeight = 190;
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x0160E0, 1);
       this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 230 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
-      // High score display text on top, white text.
+      this.highScoreBox.lineStyle(4, 0xF29305, 1);
+      this.highScoreBox.strokeRect(400 - highScoreBoxWidth / 2, boxY + 230 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+      
+      // High score display text (white text).
       this.highScoreDisplay = this.add.text(400, boxY + 240, this.displayHighScoresText(), {
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
@@ -199,21 +203,22 @@
       }).setOrigin(0.5, 0.5);
 
       // "Start Game" button: white text on blue (#0160E0) background.
-      this.startButton = this.add.text(400, boxY + boxHeight - 40, ' Start Game- (' + this.gameDuration + ' seconds) ', { 
+      this.startButton = this.add.text(400, boxY + boxHeight - 40, 'Start Game (' + this.gameDuration + ' seconds)', { 
         fontSize: '36px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
-        backgroundColor: '#F29305'
+        backgroundColor: '#0160E0'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // Place admin buttons in the top corners of the box.
+      // Place admin buttons:
+      // "Game Length" button in the top left.
       this.gameLengthButton = this.add.text(boxX + 60, boxY + 20, 'Game Length', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
-
+      // "Reset High Scores" button in the top right.
       this.resetHSButton = this.add.text(boxX + boxWidth - 80, boxY + 20, 'Reset High Scores', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
@@ -317,7 +322,6 @@
           this.timerText.setText('Time: ' + this.gameTime);
           if (this.gameTime <= 0) {
             this.time.removeAllEvents();
-            // End-of-game handling.
             this.time.addEvent({
               delay: 500,
               callback: this.handleEndOfGame,
@@ -336,30 +340,54 @@
       let qualifies = (scores.length < 6 || this.score > scores[scores.length - 1].score);
       if (qualifies) {
         this.sound.play('highscore', { volume: 0.6 });
+        const boxWidth = 400;
+        const boxHeight = 150;
+        const boxX = (800 - boxWidth) / 2;
+        const boxY = (600 - boxHeight) / 2;
+        let graphics = this.add.graphics();
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+        graphics.lineStyle(4, 0xF29305, 1);
+        graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
         this.add.text(400, 300, 'NEW HIGH SCORE!', { 
           fontSize: '60px',
           fontFamily: '"Pixelify Sans"',
           fill: '#0160E0',
           fontStyle: 'bold'
         }).setOrigin(0.5, 0.5);
+        // Wait 2500ms before prompting.
         this.time.addEvent({
-          delay: 1500,
+          delay: 2500,
           callback: () => { this.checkHighScoreAndPrompt(); },
           callbackScope: this
         });
       } else {
         this.sound.play('gameoverSound', { volume: 0.5 });
+        const boxWidth = 400;
+        const boxHeight = 150;
+        const boxX = (800 - boxWidth) / 2;
+        const boxY = (600 - boxHeight) / 2;
+        let graphics = this.add.graphics();
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+        graphics.lineStyle(2, 0xff0000, 1);
+        graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
         this.add.text(400, 300, 'Game Over!', { 
           fontSize: '60px',
           fontFamily: '"Pixelify Sans"',
           fill: '#f00',
           fontStyle: 'bold'
         }).setOrigin(0.5, 0.5);
+        let mainMenuButton = this.add.text(400, 400, 'Main Menu', { 
+          fontSize: '32px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff',
+          backgroundColor: '#0160E0'
+        }).setOrigin(0.5, 0.5).setInteractive();
+        mainMenuButton.on('pointerdown', () => {
+          this.scene.restart();
+        });
       }
-    }
-
-    showGameOver() {
-      // Not used now; handleEndOfGame() does the job.
     }
 
     scheduleNextMole() {
