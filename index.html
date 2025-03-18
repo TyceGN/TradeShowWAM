@@ -102,6 +102,7 @@
 
     preload() {
       this.load.image('background', 'assets/background.png');
+      this.load.image('instructions', 'assets/instructions.png');
       // Good mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
@@ -349,36 +350,48 @@
     }
 
     startSequence() {
-      const boxWidth = 400;
-      const boxHeight = 150;
-      const boxX = (800 - boxWidth) / 2;
-      const boxY = (600 - boxHeight) / 2;
-      this.sequenceGraphics = this.add.graphics();
-      this.sequenceGraphics.fillStyle(0xffffff, 1);
-      this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-      this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
-      this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-      this.sequenceText = this.add.text(400, 300, 'Ready', { 
-        fontSize: '60px',
-        fontFamily: '"Pixelify Sans"',
-        fill: '#000',
-        fontStyle: 'bold'
-      }).setOrigin(0.5, 0.5);
-
-      this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
-      this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
+      // Show instructions image first
+      let instructionsImage = this.add.image(400, 300, 'instructions').setDepth(100);
+  
+      // Wait 7 seconds, then remove instructions and start the countdown
       this.time.addEvent({
-        delay: 3000,
+        delay: 7000,
         callback: () => {
-          this.sequenceGraphics.destroy();
-          this.sequenceText.destroy();
+          instructionsImage.destroy();
+          
+          const boxWidth = 400;
+          const boxHeight = 150;
+          const boxX = (800 - boxWidth) / 2;
+          const boxY = (600 - boxHeight) / 2;
+          this.sequenceGraphics = this.add.graphics();
+          this.sequenceGraphics.fillStyle(0xffffff, 1);
+          this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+          this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
+          this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+          this.sequenceText = this.add.text(400, 300, 'Ready', { 
+            fontSize: '60px',
+            fontFamily: '"Pixelify Sans"',
+            fill: '#000',
+            fontStyle: 'bold'
+          }).setOrigin(0.5, 0.5);
+
+          this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
+          this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
           this.time.addEvent({
-            delay: 1000,
-            callback: this.startGame,
-            callbackScope: this
+            delay: 3000,
+            callback: () => {
+              this.sequenceGraphics.destroy();
+              this.sequenceText.destroy();
+              this.time.addEvent({
+                delay: 1000,
+                callback: this.startGame,
+                callbackScope: this
+              });
+            }
           });
-        }
+        },
+        callbackScope: this
       });
     }
 
