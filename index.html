@@ -102,6 +102,7 @@
 
     preload() {
       this.load.image('background', 'assets/background.png');
+      this.load.image('instructions', 'assets/instructions.png');
       // Good mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
@@ -335,17 +336,29 @@
         this.resetHSButton.destroy();
         
         this.sound.play('startsound');
+
+        // Display instructions first—no music yet.
+        let instructionsImage = this.add.image(400, 300, 'instructions');
+        instructionsImage.setDepth(100); // ensure it's on top
+
         this.time.addEvent({
-          delay: 1000,
+          delay: 7000,
           callback: () => {
-            let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
-            this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
-            this.bgMusic.play();
-            this.startSequence();
+            instructionsImage.destroy();
+            // Then wait an additional 1 second before starting music and countdown.
+            this.time.addEvent({
+              delay: 1000,
+              callback: () => {
+                let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+                this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
+                this.bgMusic.play();
+                this.startSequence();
+              },
+              callbackScope: this
+            });
           },
           callbackScope: this
         });
-      });
     }
 
     startSequence() {
