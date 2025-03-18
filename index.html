@@ -337,7 +337,7 @@
         
         this.sound.play('startsound');
         this.time.addEvent({
-          delay: 1000,
+          delay: 7000,
           callback: () => {
             let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
             this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
@@ -355,7 +355,7 @@
   
       // Wait 7 seconds, then remove instructions and start the countdown
       this.time.addEvent({
-        delay: 7000,
+        delay: 6000,
         callback: () => {
           instructionsImage.destroy();
           
