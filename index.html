@@ -26,19 +26,22 @@
   class GameScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GameScene' });
-      this.score = 0;
       // Default game duration is 30 seconds.
       this.gameDuration = 30;
-      this.gameTime = this.gameDuration;
       // For 30s mode, total moles = 55; for 45s mode, total moles = 70.
       this.totalMolesToSpawn = 55;
+    }
+
+    // init() resets game state each time the scene starts/restarts.
+    init() {
+      this.score = 0;
+      this.gameTime = this.gameDuration;
       this.totalMolesSpawned = 0;
     }
 
     preload() {
-      // Load background and mole assets.
       this.load.image('background', 'assets/background.png');
-      // Load good mole images.
+      // Good mole images.
       this.load.image('mole1', 'assets/mole1.png');
       this.load.image('mole2', 'assets/mole2.png');
       this.load.image('mole3', 'assets/mole3.png');
@@ -46,15 +49,15 @@
       this.load.image('mole5', 'assets/mole5.png');
       this.load.image('mole6', 'assets/mole6.png');
       this.load.image('mole7', 'assets/mole7.png');
-      // Load bad mole images.
+      // Bad mole images.
       this.load.image('badmole1', 'assets/badmole1.png');
       this.load.image('badmole2', 'assets/badmole2.png');
       this.load.image('badmole3', 'assets/badmole3.png');
       this.load.image('badmole4', 'assets/badmole4.png');
-      // Load background music.
+      // Background music.
       this.load.audio('bgMusic30', 'assets/bgMusic30.mp3');
       this.load.audio('bgMusic45', 'assets/bgMusic45.mp3');
-      // Load additional sounds.
+      // Additional sounds.
       this.load.audio('startsound', 'assets/startsound.mp3');
       this.load.audio('gameoverSound', 'assets/gameover.mp3');
       this.load.audio('whacksound', 'assets/whacksound.mp3');
@@ -62,7 +65,6 @@
     }
 
     create() {
-      // Add the background.
       this.add.image(400, 300, 'background');
 
       // Updated hole positions.
@@ -79,17 +81,11 @@
       ];
       this.holeOccupied = new Array(this.holePositions.length).fill(false);
 
-      // Initialize arrays for mole types.
       this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7'];
       this.badMoleKeys = ['badmole1', 'badmole2', 'badmole3', 'badmole4'];
 
-      // Create UI elements.
       this.createUI();
-
-      // Create a group for moles.
       this.moles = this.physics.add.group();
-
-      // Show the start menu.
       this.startMenu();
     }
 
@@ -107,7 +103,7 @@
       }).setOrigin(0.5, 0.5);
     }
 
-    // High score functions.
+    // High score functions remain the same.
     getHighScores() {
       let scores = localStorage.getItem('highScores');
       if (scores) return JSON.parse(scores);
@@ -127,27 +123,6 @@
       return scores;
     }
 
-    displayHighScoresText() {
-      let scores = this.getHighScores();
-      let text = "";
-      // Always display 6 slots.
-      text += "Daily High Score: ";
-      if (scores[0]) {
-        text += scores[0].name + " - " + scores[0].company + "\n";
-      } else {
-        text += "---\n";
-      }
-      text += "Runner-up winners:\n";
-      for (let i = 1; i < 6; i++) {
-        if (scores[i]) {
-          text += i + " - " + scores[i].name + " - " + scores[i].company + "\n";
-        } else {
-          text += i + " - ---\n";
-        }
-      }
-      return text;
-    }
-
     checkHighScoreAndPrompt() {
       let scores = this.getHighScores();
       if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
@@ -160,10 +135,10 @@
       this.scene.restart();
     }
 
-    // Start menu: displays title, high scores, and admin buttons.
+    // Start menu: displays title, high scores (with new layout), and admin buttons.
     startMenu() {
       const boxWidth = 600;
-      const boxHeight = 400;
+      const boxHeight = 530;  // Increased overall height.
       const boxX = (800 - boxWidth) / 2;
       const boxY = (600 - boxHeight) / 2;
       
@@ -173,6 +148,7 @@
       this.menuGraphics.lineStyle(4, 0xF29305, 1);
       this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
+      // Title texts.
       this.titleSmall = this.add.text(400, boxY + 60, 'eG Innovations Presents:', { 
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
@@ -185,20 +161,49 @@
         fontStyle: 'bold'
       }).setOrigin(0.5, 0.5);
       
-      // High score box background (blue with an orange border).
+      // High score box background (blue) enlarged to fit 10 scores and a header.
       let highScoreBoxWidth = 450;
-      let highScoreBoxHeight = 190;
+      let highScoreBoxHeight = 320;  // Increased height.
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x0160E0, 1);
       this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 230 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
       
-      // High score display text (white text).
-      this.highScoreDisplay = this.add.text(400, boxY + 240, this.displayHighScoresText(), {
-        fontSize: '24px',
+      // High score header ("HIGH SCORES") in white.
+      let highScoreHeader = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 20, "HIGH SCORES", {
+        fontSize: '26px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff'
+      }).setOrigin(0.5, 0);
+      
+      // Top score (slot 1), slightly larger.
+      let scores = this.getHighScores();
+      let topScoreText = "";
+      if (scores[0]) {
+        topScoreText = "1 - " + scores[0].name + " - " + scores[0].company + " - " + scores[0].score;
+      } else {
+        topScoreText = "1 - --- - --- - ---";
+      }
+      let topScoreDisplay = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 60, topScoreText, {
+        fontSize: '32px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff'
+      }).setOrigin(0.5, 0);
+      
+      // Runner-up scores (slots 2-10).
+      let runnerUpText = "";
+      for (let i = 1; i < 10; i++) {
+        if (scores[i]) {
+          runnerUpText += (i+1) + " - " + scores[i].name + " - " + scores[i].company + " - " + scores[i].score + "\n";
+        } else {
+          runnerUpText += (i+1) + " - ---\n";
+        }
+      }
+      let runnerUpDisplay = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 100, runnerUpText, {
+        fontSize: '22px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
         align: 'center'
-      }).setOrigin(0.5, 0.5);
+      }).setOrigin(0.5, 0);
 
       // "Start Game" button: white text on orange (#F29305) background.
       this.startButton = this.add.text(400, boxY + boxHeight - 40, 'Start Game (' + this.gameDuration + ' seconds)', { 
@@ -208,15 +213,13 @@
         backgroundColor: '#F29305'
       }).setOrigin(0.5, 0.5).setInteractive();
 
-      // Place admin buttons:
-      // "Game Length" button in the top left.
+      // Admin buttons: "Game Length" at top left, "Reset High Scores" at top right.
       this.gameLengthButton = this.add.text(boxX + 60, boxY + 20, 'Game Length', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
         fill: '#F29305',
         backgroundColor: '#fff'
       }).setOrigin(0.5, 0.5).setInteractive();
-      // "Reset High Scores" button in the top right.
       this.resetHSButton = this.add.text(boxX + boxWidth - 80, boxY + 20, 'Reset High Scores', {
         fontSize: '16px',
         fontFamily: '"Pixelify Sans"',
@@ -247,7 +250,11 @@
         if (pin === "1122") {
           localStorage.removeItem('highScores');
           alert("High scores have been reset.");
-          this.highScoreDisplay.setText(this.displayHighScoresText());
+          // Update both top score and runner-up displays.
+          topScoreDisplay.setText("1 - --- - --- - ---");
+          runnerUpDisplay.setText(
+            "2 - ---\n3 - ---\n4 - ---\n5 - ---\n6 - ---\n7 - ---\n8 - ---\n9 - ---\n10 - ---\n"
+          );
         } else {
           alert("Incorrect PIN.");
         }
@@ -258,7 +265,9 @@
         this.titleSmall.destroy();
         this.titleLarge.destroy();
         this.highScoreBox.destroy();
-        this.highScoreDisplay.destroy();
+        highScoreHeader.destroy();
+        topScoreDisplay.destroy();
+        runnerUpDisplay.destroy();
         this.startButton.destroy();
         this.gameLengthButton.destroy();
         this.resetHSButton.destroy();
