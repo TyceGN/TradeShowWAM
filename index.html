@@ -470,14 +470,15 @@
 
       mole.on('pointerdown', () => {
         if (mole.active) {
-          this.sound.play('whacksound', { volume: 0.5 });
-          this.holeOccupied[mole.holeIndex] = false;
-          mole.destroy();
           if (mole.isBad) {
+            this.sound.play('badtap', { volume: 0.5 });
             this.score -= 5;
           } else {
+            this.sound.play('whacksound', { volume: 0.5 });
             this.score += 10;
           }
+          this.holeOccupied[mole.holeIndex] = false;
+          mole.destroy();
           this.scoreText.setText('Score: ' + this.score);
         }
       });
