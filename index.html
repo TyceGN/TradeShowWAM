@@ -166,7 +166,7 @@
       let highScoreBoxHeight = 320;  // Increased height.
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x0160E0, 1);
-      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 230 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 250 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
       
       // High score header ("HIGH SCORES") in white.
       let highScoreHeader = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 20, "HIGH SCORES", {
@@ -179,12 +179,12 @@
       let scores = this.getHighScores();
       let topScoreText = "";
       if (scores[0]) {
-        topScoreText = "1 - " + scores[0].name + " - " + scores[0].company + " - " + scores[0].score;
+        topScoreText = "1. " + scores[0].name + ", " + scores[0].company + " : " + scores[0].score + " pts";
       } else {
-        topScoreText = "1 - --- - --- - ---";
+        topScoreText = "1. ---, --- : ---";
       }
       let topScoreDisplay = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 60, topScoreText, {
-        fontSize: '32px',
+        fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
       }).setOrigin(0.5, 0);
@@ -193,13 +193,13 @@
       let runnerUpText = "";
       for (let i = 1; i < 10; i++) {
         if (scores[i]) {
-          runnerUpText += (i+1) + " - " + scores[i].name + " - " + scores[i].company + " - " + scores[i].score + "\n";
+          runnerUpText += (i+1) + ". " + scores[i].name + ", " + scores[i].company + " : " + scores[i].score + " pts\n";
         } else {
-          runnerUpText += (i+1) + " - ---\n";
+          runnerUpText += (i+1) + ". --- : ---\n";
         }
       }
       let runnerUpDisplay = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 100, runnerUpText, {
-        fontSize: '22px',
+        fontSize: '20px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
         align: 'center'
