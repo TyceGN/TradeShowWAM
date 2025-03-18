@@ -389,7 +389,9 @@
       }).setOrigin(1, 0).setInteractive();
 
       this.pauseButton.on('pointerdown', () => {
-        // Pause this scene and launch the PauseScene.
+        if (this.bgMusic) {
+          this.bgMusic.pause();
+        }
         this.scene.pause();
         this.scene.launch('PauseScene');
       });
