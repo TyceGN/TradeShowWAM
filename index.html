@@ -32,6 +32,56 @@
   }
   return input.trim();
 }
+
+  class PauseScene extends Phaser.Scene {
+    constructor() {
+      super({ key: 'PauseScene' });
+    }
+
+    create() {
+      // Create an overlay that's 10px smaller than the game canvas (800x600)
+      let overlay = this.add.graphics();
+      overlay.fillStyle(0xF29305, 1); // orange color
+      overlay.fillRect(10, 10, 800 - 20, 600 - 20);
+
+      // Add PAUSED text centered on the screen.
+      this.add.text(400, 250, 'PAUSED', {
+        fontSize: '60px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff'
+      }).setOrigin(0.5, 0.5);
+
+      // Add "Resume" button.
+      let resumeButton = this.add.text(400, 350, 'Resume', {
+        fontSize: '32px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff',
+        backgroundColor: '#000'
+      }).setOrigin(0.5, 0.5).setInteractive();
+
+      // Add "Return to Main Menu" button.
+      let menuButton = this.add.text(400, 420, 'Return to Main Menu', {
+        fontSize: '32px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff',
+        backgroundColor: '#000'
+      }).setOrigin(0.5, 0.5).setInteractive();
+
+      // When "Resume" is tapped, stop PauseScene and resume GameScene.
+      resumeButton.on('pointerdown', () => {
+        this.scene.stop(); // stops PauseScene
+        this.scene.resume('GameScene');
+      });
+
+      // When "Return to Main Menu" is tapped, stop both scenes and restart GameScene.
+      menuButton.on('pointerdown', () => {
+        this.scene.stop('GameScene'); // stop the game scene
+        this.scene.stop(); // stop PauseScene
+        this.scene.restart('GameScene'); // restart GameScene (which shows the start menu)
+      });
+    }
+  }
+  
   class GameScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GameScene' });
@@ -331,6 +381,19 @@
     }
 
     startGame() {
+      this.pauseButton = this.add.text(790, 10, 'Pause', {
+        fontSize: '20px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#fff',
+        backgroundColor: '#000'
+      }).setOrigin(1, 0).setInteractive();
+
+      this.pauseButton.on('pointerdown', () => {
+        // Pause this scene and launch the PauseScene.
+        this.scene.pause();
+        this.scene.launch('PauseScene');
+      });
+      
       this.initialGameTime = this.gameTime;
       this.time.addEvent({
         delay: 1000,
