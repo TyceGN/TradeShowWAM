@@ -56,7 +56,6 @@
         fontSize: '32px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
-        backgroundColor: '#000'
       }).setOrigin(0.5, 0.5).setInteractive();
 
       // Add "Return to Main Menu" button.
@@ -64,11 +63,14 @@
         fontSize: '32px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
-        backgroundColor: '#000'
       }).setOrigin(0.5, 0.5).setInteractive();
 
       // When "Resume" is tapped, stop PauseScene and resume GameScene.
       resumeButton.on('pointerdown', () => {
+        let gameScene = this.scene.get('GameScene');
+        if (gameScene.bgMusic) {
+          gameScene.bgMusic.resume();
+        }
         this.scene.stop(); // stops PauseScene
         this.scene.resume('GameScene');
       });
@@ -381,7 +383,7 @@
     }
 
     startGame() {
-      this.pauseButton = this.add.text(790, 10, 'Pause', {
+      this.pauseButton = this.add.text(790, 30, ' PAUSE ', {
         fontSize: '20px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
