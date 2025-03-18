@@ -163,13 +163,13 @@
       
       // High score box background (blue) enlarged to fit 10 scores and a header.
       let highScoreBoxWidth = 450;
-      let highScoreBoxHeight = 320;  // Increased height.
+      let highScoreBoxHeight = 300;  // Increased height.
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x0160E0, 1);
-      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 250 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 330 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
       
       // High score header ("HIGH SCORES") in white.
-      let highScoreHeader = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 20, "HIGH SCORES", {
+      let highScoreHeader = this.add.text(400, boxY + 230 - highScoreBoxHeight / 2 + 20, "* HIGH SCORES *", {
         fontSize: '26px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
