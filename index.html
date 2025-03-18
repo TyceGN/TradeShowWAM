@@ -328,70 +328,69 @@
         this.titleSmall.destroy();
         this.titleLarge.destroy();
         this.highScoreBox.destroy();
-        highScoreHeader.destroy();
-        topScoreDisplay.destroy();
-        runnerUpDisplay.destroy();
+        this.highScoreDisplay.destroy();
         this.startButton.destroy();
         this.gameLengthButton.destroy();
         this.resetHSButton.destroy();
-        
+  
         this.sound.play('startsound');
+
+        // Display instructions first—no music yet.
+        let instructionsImage = this.add.image(400, 300, 'instructions');
+        instructionsImage.setDepth(100); // ensure it's on top
+
+        // Wait 7 seconds, then destroy instructions...
         this.time.addEvent({
           delay: 7000,
           callback: () => {
-            let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
-            this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
-            this.bgMusic.play();
-            this.startSequence();
+            instructionsImage.destroy();
+            // Then wait an additional 1 second before starting music and countdown.
+            this.time.addEvent({
+              delay: 1000,
+              callback: () => {
+                let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+                this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
+                this.bgMusic.play();
+                this.startSequence();
+              },
+              callbackScope: this
+            });
           },
           callbackScope: this
         });
       });
-    }
 
     startSequence() {
-      // Show instructions image first
-      let instructionsImage = this.add.image(400, 300, 'instructions').setDepth(100);
-  
-      // Wait 7 seconds, then remove instructions and start the countdown
+      const boxWidth = 400;
+      const boxHeight = 150;
+      const boxX = (800 - boxWidth) / 2;
+      const boxY = (600 - boxHeight) / 2;
+      this.sequenceGraphics = this.add.graphics();
+      this.sequenceGraphics.fillStyle(0xffffff, 1);
+      this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+      this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
+      this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+      this.sequenceText = this.add.text(400, 300, 'Ready', { 
+        fontSize: '60px',
+        fontFamily: '"Pixelify Sans"',
+        fill: '#000',
+        fontStyle: 'bold'
+      }).setOrigin(0.5, 0.5);
+
+      this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
+      this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
       this.time.addEvent({
-        delay: 6000,
+        delay: 3000,
         callback: () => {
-          instructionsImage.destroy();
-          
-          const boxWidth = 400;
-          const boxHeight = 150;
-          const boxX = (800 - boxWidth) / 2;
-          const boxY = (600 - boxHeight) / 2;
-          this.sequenceGraphics = this.add.graphics();
-          this.sequenceGraphics.fillStyle(0xffffff, 1);
-          this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
-          this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
-          this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-          this.sequenceText = this.add.text(400, 300, 'Ready', { 
-            fontSize: '60px',
-            fontFamily: '"Pixelify Sans"',
-            fill: '#000',
-            fontStyle: 'bold'
-          }).setOrigin(0.5, 0.5);
-
-          this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
-          this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
+          this.sequenceGraphics.destroy();
+          this.sequenceText.destroy();
           this.time.addEvent({
-            delay: 3000,
-            callback: () => {
-              this.sequenceGraphics.destroy();
-              this.sequenceText.destroy();
-              this.time.addEvent({
-                delay: 1000,
-                callback: this.startGame,
-                callbackScope: this
-              });
-            }
+            delay: 1000,
+            callback: this.startGame,
+            callbackScope: this
           });
-        },
-        callbackScope: this
+        }
       });
     }
 
