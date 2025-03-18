@@ -23,6 +23,15 @@
 </head>
 <body>
 <script>
+  // Set up validation for High Score prompts
+  function promptForNonEmpty(message, defaultValue = "") {
+  let input = prompt(message, defaultValue);
+  while (input === null || input.trim() === "") {
+    alert("Please enter a valid value.");
+    input = prompt(message, defaultValue);
+  }
+  return input.trim();
+}
   class GameScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GameScene' });
@@ -31,7 +40,7 @@
       // For 30s mode, total moles = 55; for 45s mode, total moles = 70.
       this.totalMolesToSpawn = 55;
     }
-
+    
     // init() resets game state each time the scene starts/restarts.
     init() {
       this.score = 0;
@@ -126,8 +135,8 @@
     checkHighScoreAndPrompt() {
       let scores = this.getHighScores();
       if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
-        let name = prompt("New high score! Enter your first name and last initial:");
-        let company = prompt("Enter your company name:");
+        let name = promptForNonEmpty("New high score! Enter your first name and last initial:");
+        let company = promptForNonEmpty("Enter your company name:");
         scores = this.updateHighScores(this.score, name, company);
         alert("High score recorded!");
       }
