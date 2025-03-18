@@ -166,10 +166,10 @@
       let highScoreBoxHeight = 290;  // Increased height.
       this.highScoreBox = this.add.graphics();
       this.highScoreBox.fillStyle(0x0160E0, 1);
-      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 330 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+      this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 310 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
       
       // High score header ("HIGH SCORES") in white.
-      let highScoreHeader = this.add.text(400, boxY + 330 - highScoreBoxHeight / 2 + 10, "* HIGH SCORES *", {
+      let highScoreHeader = this.add.text(400, boxY + 310 - highScoreBoxHeight / 2 + 10, "* HIGH SCORES *", {
         fontSize: '26px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
@@ -183,7 +183,7 @@
       } else {
         topScoreText = "1. ---, --- : ---";
       }
-      let topScoreDisplay = this.add.text(400, boxY + 330 - highScoreBoxHeight / 2 + 55, topScoreText, {
+      let topScoreDisplay = this.add.text(400, boxY + 310 - highScoreBoxHeight / 2 + 55, topScoreText, {
         fontSize: '24px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff'
@@ -198,7 +198,7 @@
           runnerUpText += (i+1) + ". --- : ---\n";
         }
       }
-      let runnerUpDisplay = this.add.text(400, boxY + 330 - highScoreBoxHeight / 2 + 80, runnerUpText, {
+      let runnerUpDisplay = this.add.text(400, boxY + 310 - highScoreBoxHeight / 2 + 80, runnerUpText, {
         fontSize: '20px',
         fontFamily: '"Pixelify Sans"',
         fill: '#fff',
