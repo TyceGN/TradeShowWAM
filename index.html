@@ -190,7 +190,7 @@
       if (scores[0]) {
         topScoreText = "1. " + scores[0].name + ", " + scores[0].company + " : " + scores[0].score + " pts";
       } else {
-        topScoreText = "1. ---, --- : ---";
+        topScoreText = "1. ---, --- : 0 pts";
       }
       let topScoreDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 55, topScoreText, {
         fontSize: '24px',
@@ -204,7 +204,7 @@
         if (scores[i]) {
           runnerUpText += (i+1) + ". " + scores[i].name + ", " + scores[i].company + " : " + scores[i].score + " pts\n";
         } else {
-          runnerUpText += (i+1) + ". --- : ---\n";
+          runnerUpText += (i+1) + ". ---, --- : 0 pts\n";
         }
       }
       let runnerUpDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 80, runnerUpText, {
