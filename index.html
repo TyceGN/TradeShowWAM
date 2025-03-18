@@ -343,6 +343,7 @@
     }
 
     handleEndOfGame() {
+      this.moles.clear(true, true);
       let scores = this.getHighScores();
       let qualifies = (scores.length < 6 || this.score > scores[scores.length - 1].score);
       if (qualifies) {
