@@ -328,33 +328,21 @@
         this.titleSmall.destroy();
         this.titleLarge.destroy();
         this.highScoreBox.destroy();
-        this.highScoreDisplay.destroy();
+        highScoreHeader.destroy();
+        topScoreDisplay.destroy();
+        runnerUpDisplay.destroy();
         this.startButton.destroy();
         this.gameLengthButton.destroy();
         this.resetHSButton.destroy();
-
+        
         this.sound.play('startsound');
-
-        // Display instructions image first—no music yet.
-        let instructionsImage = this.add.image(400, 300, 'instructions');
-        instructionsImage.setDepth(100); // ensure it's on top
-
-        // Wait 7 seconds, then destroy instructions...
         this.time.addEvent({
-          delay: 7000,
+          delay: 1000,
           callback: () => {
-            instructionsImage.destroy();
-            // Then wait an additional 1 second before starting music and countdown.
-            this.time.addEvent({
-              delay: 1000,
-              callback: () => {
-                let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
-                this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
-                this.bgMusic.play();
-                this.startSequence();
-              },
-              callbackScope: this
-            });
+            let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+            this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
+            this.bgMusic.play();
+            this.startSequence();
           },
           callbackScope: this
         });
@@ -599,6 +587,10 @@
       console.log('Font loaded, creating game instance');
       const game = new Phaser.Game(config);
     }
+  });
+</script>
+</body>
+</html>
   });
 </script>
 </body>
