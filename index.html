@@ -23,7 +23,7 @@
   <!-- All our game code is now a module -->
   <script type="module">
     // Import Phaser as a module.
-    import Phaser from "https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js";
+    import * as Phaser from "https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js";
     
     // Set up validation for High Score prompts
     function promptForNonEmpty(message, defaultValue = "") {
