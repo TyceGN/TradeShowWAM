@@ -22,6 +22,18 @@
 <body>
   <!-- All our game code is now a module -->
   <script type="module">
+    import {
+        app, 
+        analytics, 
+        database, 
+        ref, 
+        get, 
+        set, 
+        push, 
+        query, 
+        orderByChild 
+    } from "./firebase-init.js";
+
     // Import Phaser as a module.
     import * as Phaser from "https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.esm.js";
     
@@ -98,6 +110,9 @@
         this.gameDuration = 30;
         // For 30s mode, total moles = 55; for 45s mode, total moles = 70.
         this.totalMolesToSpawn = 55;
+
+        this.cachedScores = [];
+        this.lastSuccessfulFetch = null;
       }
       
       // init() resets game state each time the scene starts/restarts.
@@ -173,40 +188,167 @@
         }).setOrigin(0.5, 0.5);
       }
     
-      // High score functions remain the same.
-      getHighScores() {
-        let scores = localStorage.getItem('highScores');
-        if (scores) return JSON.parse(scores);
-        return [];
+      // Replace the existing high score functions in GameScene
+      async getHighScores() {
+          try {
+              const resetRef = ref(database, 'resets');
+              const resetSnapshot = await get(resetRef);
+              let latestReset = null;
+        
+              if (resetSnapshot.exists()) {
+                  const resets = Object.values(resetSnapshot.val());
+                  latestReset = resets.reduce((latest, reset) => {
+                      return (!latest || reset.timestamp > latest) ? reset.timestamp : latest;
+                  }, null);
+              }
+
+              //Get scores after the latest reset
+              const scoresRef = ref(database, 'scores');
+              const scoresSnapshot = await get(scoresRef);
+        
+              if (!scoresSnapshot.exists()) {
+                console.log("No scores loaded due to database error.");
+                return this.cachedScores;
+              }
+
+              // Get all scores
+              const allScores = Object.values(scoresSnapshot.val())
+                  .filter(score => !latestReset || score.timestamp > latestReset);
+        
+              //Update cache on successful fetch
+              this.cachedScores = allScores;
+              this.lastSuccessfulFetch = new Date();
+
+              // Helper function to clean strings
+              const cleanString = (str) => {
+                  return str
+                      .toLowerCase()
+                      .replace(/[^\w\s]/g, '')  // Remove punctuation
+                      .replace(/\s+/g, '');      // Remove all spaces
+              };
+
+              // Group by player (name + company) and keep highest score
+              const playerMap = new Map();
+              allScores.forEach(score => {
+                 const playerKey = `${score.name}-${score.company}`.toLowerCase();
+                 if (!playerMap.has(playerKey) || playerMap.get(playerKey).score < score.score) {
+                     playerMap.set(playerKey, score);
+                  }
+             });
+
+             // Convert to array and sort by score
+             const uniqueScores = Array.from(playerMap.values());
+             uniqueScores.sort((a, b) => b.score - a.score);
+        
+              return uniqueScores.slice(0, 10); // Return top 10
+          } catch (error) {
+             console.error("Database error:", error);
+
+            if (error.code === "PERMISSION_DENIED") {
+                alert("Unable to access scores. Please check with administrator.");
+            } else if (error.code === "NETWORK_ERROR") {
+                alert("Network connection lost. Using cached scores.");
+            } else {
+                alert("Unable to retrieve scores. Using cached scores.");
+            }
+            if (this.cachedScores.length > 0) {
+              console.log("Using cached scores from: ", this.lastSuccessfulFetch);  
+              return this.cachedScores.slice(0, 10);
+            }
+
+            //Absolute fallback
+            return [
+                { name: "OFFLINE", company: "MODE", score: 0 },
+                { name: "NO", company: "DATA", score: 0 },
+                { name: "AVAILABLE", company: "", score: 0 },
+                { name: "PLEASE", company: "TRY", score: 0 },
+                { name: "AGAIN", company: "LATER", score: 0 },
+                { name: "OR", company: "CONTACT", score: 0 },
+                { name: "ADMINISTRATOR", company: "", score: 0 },
+                { name: "FOR", company: "ASSISTANCE", score: 0 },
+                { name: "THANK", company: "YOU", score: 0 },
+                { name: "FOR", company: "PLAYING", score: 0 }
+              ];
+          }
       }
-    
-      saveHighScores(scores) {
-        localStorage.setItem('highScores', JSON.stringify(scores));
+
+      async saveHighScore(score, name, company) {
+          try {
+              const scoreData = {
+                  score: score,
+                  name: name,
+                  company: company,
+                  timestamp: new Date().toISOString(),
+                  gameDuration: this.gameDuration
+              };
+        
+              // Save to scores list
+              const scoresRef = ref(database, 'scores');
+              await push(scoresRef, scoreData);
+              console.log("✅ Score saved successfully");
+              return true;
+          } catch (error) {
+              console.error("❌ Error saving score:", error);
+              alert("Unable to save score. Please try again.");
+              return false;
+          }
       }
-    
-      updateHighScores(newScore, name, company) {
-        let scores = this.getHighScores();
-        scores.push({ score: newScore, name: name, company: company });
-        scores.sort((a, b) => b.score - a.score);
-        if (scores.length > 6) scores = scores.slice(0, 6);
-        this.saveHighScores(scores);
-        return scores;
+
+      async checkHighScoreAndPrompt() {
+          try {
+              const scores = await this.getHighScores();
+              const playerQualifies = scores.length < 10 || this.score > scores[9].score;
+        
+              if (playerQualifies) {
+                  let name = promptForNonEmpty("New high score! Enter your first name and last initial:");
+                  let company = promptForNonEmpty("Enter your company name:");
+            
+                  await this.saveHighScore(this.score, name, company);
+                  alert("High score recorded!");
+              }
+              this.scene.restart();
+          } catch (error) {
+              console.error("Error handling high score:", error);
+              this.scene.restart();
+          }
       }
+      // Add after checkHighScoreAndPrompt() and before startMenu()
+
+      async updateHighScoreDisplay(scores) {
+          const boxWidth = 600;
+          const boxHeight = 500;
+          const boxX = (800 - boxWidth) / 2;
+          const boxY = (600 - boxHeight) / 2 + 30;
+          const highScoreBoxHeight = 290;
+
+          // Update top score
+          let topScoreText = scores[0]
+              ? `1. ${scores[0].name}, ${scores[0].company} : ${scores[0].score} pts`
+              : "1. ---, --- : 0 pts";
     
-      checkHighScoreAndPrompt() {
-        let scores = this.getHighScores();
-        if (scores.length < 6 || this.score > scores[scores.length - 1].score) {
-          let name = promptForNonEmpty("New high score! Enter your first name and last initial:");
-          let company = promptForNonEmpty("Enter your company name:");
-          scores = this.updateHighScores(this.score, name, company);
-          alert("High score recorded!");
-        }
-        // Return to main menu.
-        this.scene.restart();
+          // Find and update the top score display
+          if (this.topScoreDisplay) {
+              this.topScoreDisplay.setText(topScoreText);
+          }
+
+          // Update runner-up scores
+          let runnerUpText = "";
+          for (let i = 1; i < 10; i++) {
+              if (scores[i]) {
+                  runnerUpText += `${i+1}. ${scores[i].name}, ${scores[i].company} : ${scores[i].score} pts\n`;
+              } else {
+                  runnerUpText += `${i+1}. ---, --- : 0 pts\n`;
+              }
+          }
+
+          // Find and update the runner-up display
+          if (this.runnerUpDisplay) {
+              this.runnerUpDisplay.setText(runnerUpText);
+          }
       }
-    
+
       // Start menu: displays title, high scores (with new layout), and admin buttons.
-      startMenu() {
+      async startMenu() {
         const boxWidth = 600;
         const boxHeight = 500;  // Increased overall height.
         const boxX = (800 - boxWidth) / 2;
@@ -246,14 +388,14 @@
         }).setOrigin(0.5, 0);
         
         // Top score (slot 1), slightly larger.
-        let scores = this.getHighScores();
+        let scores = await this.getHighScores();
         let topScoreText = "";
         if (scores[0]) {
           topScoreText = "1. " + scores[0].name + ", " + scores[0].company + " : " + scores[0].score + " pts";
         } else {
           topScoreText = "1. ---, --- : 0 pts";
         }
-        let topScoreDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 55, topScoreText, {
+        this.topScoreDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 55, topScoreText, {
           fontSize: '24px',
           fontFamily: '"Pixelify Sans"',
           fill: '#fff'
@@ -268,7 +410,7 @@
             runnerUpText += (i+1) + ". ---, --- : 0 pts\n";
           }
         }
-        let runnerUpDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 80, runnerUpText, {
+        this.runnerUpDisplay = this.add.text(400, boxY + 275 - highScoreBoxHeight / 2 + 80, runnerUpText, {
           fontSize: '20px',
           fontFamily: '"Pixelify Sans"',
           fill: '#fff',
@@ -315,29 +457,34 @@
           }
         });
     
-        this.resetHSButton.on('pointerdown', () => {
+        this.resetHSButton.on('pointerdown', async () => {
           let pin = prompt("Enter 4-digit PIN:");
           if (pin === "1122") {
-            localStorage.removeItem('highScores');
-            alert("High scores have been reset.");
-            // Update both top score and runner-up displays.
-            topScoreDisplay.setText("1 - --- - --- - ---");
-            runnerUpDisplay.setText(
-              "2 - ---\n3 - ---\n4 - ---\n5 - ---\n6 - ---\n7 - ---\n8 - ---\n9 - ---\n10 - ---\n"
-            );
+              try {
+                  const resetRef = ref(database, 'resets');
+                  await push(resetRef, {
+                    timestamp: new Date().toISOString()
+                  });
+                  alert("High scores reset successfully.");
+                  const scores = await this.getHighScores();
+                  this.updateHighScoreDisplay(scores);
+              } catch (error) {
+                  console.error("Error resetting scores:", error);
+                  alert("Error resetting high scores.");
+              }
           } else {
-            alert("Incorrect PIN.");
+              alert("Incorrect PIN.");
           }
         });
     
-        this.startButton.on('pointerdown', () => {
+        this.startButton.on('pointerdown', async () => {
           this.menuGraphics.destroy();
           this.titleSmall.destroy();
           this.titleLarge.destroy();
           this.highScoreBox.destroy();
           highScoreHeader.destroy();
-          topScoreDisplay.destroy();
-          runnerUpDisplay.destroy();
+          this.topScoreDisplay.destroy();
+          this.runnerUpDisplay.destroy();
           this.startButton.destroy();
           this.gameLengthButton.destroy();
           this.resetHSButton.destroy();
@@ -345,28 +492,34 @@
           this.sound.play('startsound');
     
           // Display instructions image first—no music yet.
-          let instructionsImage = this.add.image(400, 300, 'instructions');
-          instructionsImage.setDepth(100); // ensure it's on top
+          await new Promise(resolve => {
+              let instructionsImage = this.add.image(400, 300, 'instructions');
+              instructionsImage.setDepth(100); // ensure it's on top
     
-          // Wait 7 seconds, then destroy instructions...
-          this.time.addEvent({
-            delay: 7000,
-            callback: () => {
-              instructionsImage.destroy();
-              // Then wait an additional 1 second before starting music and countdown.
+              // Wait 7 seconds, then destroy instructions...
               this.time.addEvent({
-                delay: 1000,
+                delay: 7000,
                 callback: () => {
-                  let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
-                  this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
-                  this.bgMusic.play();
-                  this.startSequence();
+                  instructionsImage.destroy();
+                  resolve();
                 },
                 callbackScope: this
               });
-            },
-            callbackScope: this
           });
+          // Then wait an additional 1 second before starting music and countdown.
+          await new Promise(resolve => {
+              this.time.addEvent({
+                delay: 1000,
+                callback: resolve,
+                callbackScope: this
+              });
+          });
+
+          // Start music and game
+          let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+          this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
+          this.bgMusic.play();
+          this.startSequence();
         });
       }
     
@@ -430,7 +583,9 @@
               this.time.removeAllEvents();
               this.time.addEvent({
                 delay: 500,
-                callback: this.handleEndOfGame,
+                callback: async () => {
+                  await this.handleEndOfGame()
+                },
                 callbackScope: this
               });
             }
@@ -441,10 +596,10 @@
         this.scheduleNextMole();
       }
     
-      handleEndOfGame() {
+      async handleEndOfGame() {
         this.moles.clear(true, true);
-        let scores = this.getHighScores();
-        let qualifies = (scores.length < 6 || this.score > scores[scores.length - 1].score);
+        let scores = await this.getHighScores();
+        let qualifies = (scores.length < 10 || this.score > scores[scores.length - 1].score);
         if (qualifies) {
           this.sound.play('highscore', { volume: 0.6 });
           const boxWidth = 500;
