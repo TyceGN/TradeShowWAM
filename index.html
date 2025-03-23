@@ -45,26 +45,31 @@
         let overlay = this.add.graphics();
         overlay.fillStyle(0xF29305, 1); // orange color
         overlay.fillRect(10, 10, 800 - 20, 600 - 20);
+        overlay.lineStyle(8, 0x000000, 1); // white stroke, 8 pixels wide
+        overlay.strokeRect(10, 10, 800 - 20, 600 - 20);
     
         // Add PAUSED text centered on the screen.
         this.add.text(400, 250, 'PAUSED', {
-          fontSize: '60px',
+          fontSize: '64px',
           fontFamily: '"Pixelify Sans"',
-          fill: '#fff'
+          fontStyle: 'bold',
+          fill: '#000'
         }).setOrigin(0.5, 0.5);
     
         // Add "Resume" button.
-        let resumeButton = this.add.text(400, 350, 'Resume', {
-          fontSize: '32px',
+        let resumeButton = this.add.text(400, 350, '|                  Resume                  |', {
+          fontSize: '36px',
           fontFamily: '"Pixelify Sans"',
           fill: '#fff',
+          backgroundColor: '#000'
         }).setOrigin(0.5, 0.5).setInteractive();
     
         // Add "Return to Main Menu" button.
-        let menuButton = this.add.text(400, 420, 'Return to Main Menu', {
-          fontSize: '32px',
+        let menuButton = this.add.text(400, 420, '|  Return to Main Menu  |', {
+          fontSize: '36px',
           fontFamily: '"Pixelify Sans"',
           fill: '#fff',
+          backgroundColor: '#000'
         }).setOrigin(0.5, 0.5).setInteractive();
     
         // When "Resume" is tapped, stop PauseScene and resume GameScene.
@@ -400,11 +405,11 @@
       }
     
       startGame() {
-        this.pauseButton = this.add.text(600, 100, ' || ', {
+        this.pauseButton = this.add.text(525, 85, ' || ', {
           fontSize: '32px',
           fontFamily: '"Pixelify Sans"',
-          fill: '#000',
-          backgroundColor: '#fff'
+          fill: '#fff',
+          backgroundColor: '#F29305'
         }).setOrigin(1, 0).setInteractive();
     
         this.pauseButton.on('pointerdown', () => {
