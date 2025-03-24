@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
   <!-- You can leave WebFont Loader as-is if it does not support modules -->
   <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
   <style>
@@ -194,6 +195,27 @@
         this.createUI();
         this.moles = this.physics.add.group();
         this.startMenu();
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.scene.isActive() && this.gameTime > 0) {
+                if (this.bgMusic) {
+                    this.bgMusic.pause();
+                }
+                this.scene.pause();
+                this.scene.launch('PauseScene');
+            }
+        });
+
+        // Add blur handler for window focus
+        window.addEventListener('blur', () => {
+            if (this.scene.isActive() && this.gameTime > 0) {
+                if (this.bgMusic) {
+                this.bgMusic.pause();
+                }
+                this.scene.pause();
+                this.scene.launch('PauseScene');
+            }
+        });
       }
     
       createUI() {
