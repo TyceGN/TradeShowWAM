@@ -166,8 +166,8 @@
 
       formatScore(position, score) {
         const pos = position < 10 ? ` ${position}` : position;
-        const name = score.name.padEnd(10, ' ');
-        const company = score.company.padEnd(10, ' ');
+        const name = score.name.padEnd(12, ' ');
+        const company = score.company.padEnd(18, ' ');
         const scoreNum = score.score.toString().padStart(3, ' ');
         return `${pos}.  ${name}${company}${score.score} pts`;
       }
@@ -372,7 +372,7 @@
           // Update top score
           let topScoreText = scores[0]
               ? this.formatScore(1, scores[0])
-              : ` 1.  ---        ---       0 pts"`;
+              : ` 1.  ---          ---               0 pts"`;
     
           // Find and update the top score display
           if (this.topScoreDisplay) {
@@ -386,7 +386,7 @@
                 runnerUpText += this.formatScore(i + 1, scores[i]) + "\n";
               } else {
                 const pos = i + 1 < 10 ? ` ${i + 1}` : `${i + 1}`;
-                runnerUpText += `${pos}.  ---        ---       0 pts\n`;
+                runnerUpText += `${pos}.  ---          ---               0 pts\n`;
               }
           }
 
@@ -447,10 +447,10 @@
         if (scores[0]) {
           topScoreText = this.formatScore(1, scores[0]);
         } else {
-          topScoreText = " 1.  ---        ---       0 pts";
+          topScoreText = " 1.  ---          ---               0 pts";
         }
         this.topScoreDisplay = this.add.text(400 - highScoreBoxWidth/2 + 20, boxY + 235 - highScoreBoxHeight / 2 + 55, topScoreText, {
-          fontSize: '22px',
+          fontSize: '16px',
           fontFamily: '"Courier New", Courier, "Liberation Mono", monospace',
           fontStyle: 'bold',
           fill: '#fff'
@@ -463,11 +463,11 @@
             runnerUpText += this.formatScore(i + 1, scores[i]) + "\n";
           } else {
             const pos = i + 1 < 10 ? ` ${i + 1}` : `${i + 1}`;
-            runnerUpText += `${pos}.  ---        ---       0 pts\n`;
+            runnerUpText += `${pos}.  ---          ---               0 pts\n`;
           }
         }
         this.runnerUpDisplay = this.add.text(400 - highScoreBoxWidth/2 + 20, boxY + 240 - highScoreBoxHeight / 2 + 80, runnerUpText, {
-          fontSize: '22px',
+          fontSize: '16px',
           fontFamily: '"Courier New", Courier, "Liberation Mono", monospace',
           fill: '#fff',
         }).setOrigin(0, 0);
