@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <title>Whack-a-Mole Game</title>
   <!-- Function as a Web App on iOS devices -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -117,6 +118,11 @@
 
         // When "Return to Main Menu" is tapped, stop both scenes and restart GameScene.
         menuButton.on('pointerdown', () => {
+          let gameScene = this.scene.get('GameScene');
+          if (gameScene.bgMusic) {
+            gameScene.bgMusic.stop(); // Stop music completely
+          }
+          gameScene.gameActive = false; // Reset game active state
           this.scene.stop('GameScene'); // stop the game scene
           this.scene.stop(); // stop PauseScene
           this.scene.start('GameScene'); // restart GameScene (which shows the start menu)
@@ -130,7 +136,7 @@
       constructor() {
         super({ key: 'GameScene' });
         this.gameDuration = 30;
-        this.totalMolesToSpawn = 55;
+        this.totalMolesToSpawn = 52;
         this.cachedScores = [];
         this.lastSuccessfulFetch = null;
         // Only track spawned moles
@@ -151,6 +157,7 @@
       preload() {
         this.load.image('background', 'assets/background.png');
         this.load.image('instructions', 'assets/instructions.png');
+        this.load.image('titlemole', 'assets/titlemole.png');
         // Good mole images.
         this.load.image('mole1', 'assets/mole1.png');
         this.load.image('mole2', 'assets/mole2.png');
@@ -177,10 +184,10 @@
 
       formatScore(position, score) {
         const pos = position < 10 ? ` ${position}` : position;
-        const name = score.name.padEnd(12, ' ');
-        const company = score.company.padEnd(18, ' ');
+        const name = score.name.substring(0, 12).padEnd(12, ' ');
+        const company = score.company.substring(0, 18).padEnd(18, ' ');
         const scoreNum = score.score.toString().padStart(3, ' ');
-        return `${pos}.  ${name}${company}${score.score} pts`;
+        return `${pos}. ${name} ${company} ${scoreNum} pts`;
       }
 
       create() {
@@ -207,27 +214,56 @@
         this.moles = this.physics.add.group();
         this.startMenu();
 
-        document.addEventListener('visibilitychange', () => {
-          if (document.hidden && this.scene.isActive() && this.gameActive) {
-            if (this.bgMusic) {
-              this.bgMusic.pause();
-            }
-            this.scene.pause();
-            this.scene.launch('PauseScene');
-          }
-        });
-
-        // Add blur handler for window focus
-        window.addEventListener('blur', () => {
-          if (this.scene.isActive() && this.gameActive) {
-            if (this.bgMusic) {
-              this.bgMusic.pause();
-            }
-            this.scene.pause();
-            this.scene.launch('PauseScene');
-          }
-        });
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        window.addEventListener('blur', this.handleBlur);
       }
+
+      destroy() {
+        console.log("🧹 Cleaning up resources...");
+        // Clean up music
+        if (this.bgMusic) {
+          this.bgMusic.destroy();
+        }
+
+        // Remove all event listeners
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        window.removeEventListener('blur', this.handleBlur);
+
+        // Clear all timers
+        this.time.removeAllEvents();
+
+        // Destroy all moles
+        if (this.moles) {
+          this.moles.clear(true, true);
+        }
+
+        console.log("✅ Cleanup complete");
+        
+        // Call parent destroy
+        super.destroy();
+      }
+
+      handleVisibilityChange = () => {
+        if (document.hidden && this.scene.isActive() && this.gameActive) {
+          if (this.bgMusic) {
+            this.bgMusic.stop();  // Changed from pause() to stop()
+            this.bgMusic.destroy();  // Added cleanup
+          }
+          this.scene.pause();
+          this.scene.launch('PauseScene');
+        }
+      };
+
+      handleBlur = () => {
+        if (this.scene.isActive() && this.gameActive) {
+          if (this.bgMusic) {
+            this.bgMusic.stop();  // Changed from pause() to stop()
+            this.bgMusic.destroy();  // Added cleanup
+          }
+          this.scene.pause();
+          this.scene.launch('PauseScene');
+        }
+      };
 
       createUI() {
         console.log('Creating UI elements with Pixelify Sans');
@@ -448,9 +484,10 @@
           fill: '#000'
         }).setOrigin(0, 0.5);
 
-        const titleMole = this.add.image(200, boxY + 55, 'mole7');
+        const titleMole = this.add.image(205, boxY + 52, 'titlemole');
         titleMole.setOrigin(0.5, 0.5);
-        titleMole.setScale(0.75); // Adjust scale as needed
+        titleMole.setDepth(100);
+        titleMole.setScale(0.85); // Adjust scale as needed
 
         this.titleLarge = this.add.text(240, boxY + 70, 'IT Whack-A-Mole', {
           fontSize: '50px',
@@ -485,7 +522,7 @@
           fontSize: '16px',
           fontFamily: '"Courier New", Courier, "Liberation Mono", monospace',
           fontStyle: 'bold',
-          fill: '#fff'
+          fill: '#ff0'
         }).setOrigin(0, 0);
 
         // Runner-up scores (slots 2-10).
@@ -551,7 +588,7 @@
               this.gameDuration = parseInt(newDuration);
               this.gameTime = this.gameDuration;
               // Set total moles: 55 for 30s, 70 for 45s.
-              this.totalMolesToSpawn = (this.gameDuration === 30) ? 55 : 75;
+              this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
               this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
             } else {
               alert("Invalid duration. Keeping current game length.");
@@ -849,9 +886,28 @@
           return;
         }
         let minDelay = 200;
-        let maxDelay = 1100;
-        let currentMax = minDelay + (this.gameTime / this.initialGameTime) * (maxDelay - minDelay);
-        let nextDelay = Phaser.Math.Between(minDelay, Math.floor(currentMax));
+        let maxDelay = 1200;
+        const gameProgress = 1 - (this.gameTime / this.initialGameTime);
+
+        // Exponential acceleration curve
+        const linearPart = gameProgress * 0.7;
+        const exponentialPart = Math.pow(gameProgress, 1.5) * 0.3;
+        const speedMultiplier = linearPart + exponentialPart;
+
+        const currentMax = maxDelay - ((maxDelay - minDelay) * speedMultiplier);
+        const currentMin = minDelay + ((500 - minDelay) * (1 - speedMultiplier));
+
+        let nextDelay = Phaser.Math.Between(
+          Math.floor(currentMin),
+          Math.floor(currentMax)
+        );
+
+        //iOS timing adjustment
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          nextDelay = Math.max(nextDelay, 300);
+        }
+
+        // Only schedule one event
         this.time.addEvent({
           delay: nextDelay,
           callback: this.spawnMole,
@@ -932,9 +988,19 @@
 
         // Calculate mole duration based on remaining time
         const minDuration = 400;
-        const maxDuration = 1200;
-        const timeRatio = this.gameTime / this.initialGameTime;
-        const moleDuration = minDuration + (timeRatio * (maxDuration - minDuration));
+        const maxDuration = 1400;
+        const gameProgress = 1 - (this.gameTime / this.initialGameTime);
+
+        // Exponential decrease in duration
+        const linearPart = gameProgress * 0.8;  // 80% linear
+        const exponentialPart = Math.pow(gameProgress, 1.5) * 0.2;  // 20% exponential, reduced power
+        const durationMultiplier = 1 - (linearPart + exponentialPart);
+
+        // Calculate current duration
+        let moleDuration = minDuration + ((maxDuration - minDuration) * durationMultiplier);
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          moleDuration = Math.max(moleDuration, 600); // Ensure minimum duration on iOS
+        }
 
         mole.on('pointerdown', () => {
           if (mole.active) {

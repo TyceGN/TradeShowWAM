@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
 
 //Game version
-const GAME_VERSION = '1.0.1';
+const GAME_VERSION = '1.2.0 NerdioCon';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
