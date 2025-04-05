@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
 import {
     getDatabase,
     ref,
@@ -29,6 +30,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const database = getDatabase(app);
+const auth = getAuth(app);
 
 // Keep the connection test function
 const connectDatabase = async () => {
@@ -53,44 +55,60 @@ connectDatabase().catch(error => {
 });
 
 const saveGameAnalytics = async (gameData) => {
-    try {
-        const analyticsRef = ref(database, 'gameAnalytics');
-        const gameStats = {
-            timestamp: gameData.timestamp,
-            gameDuration: gameData.gameDuration,
-            finalScore: gameData.score,
-            player: gameData.name,
-            company: gameData.company,
-            isManualEntry: gameData.isManualEntry,
-            gameVersion: GAME_VERSION,
-            deviceType: /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'iOS' : 'Other'
-        };
+        try {
+            // Generate a unique game ID
+            const gameId = push(ref(database, 'temp')).key;
 
-        // Only add mole stats if it's not a manual entry
-        if (!gameData.isManualEntry && gameData.moleStats) {
-            gameStats.moleStats = gameData.moleStats;
+            const gameStats = {
+                gameId: gameId,
+                timestamp: gameData.timestamp,
+                gameDuration: gameData.gameDuration,
+                finalScore: gameData.score,
+                player: gameData.name,
+                company: gameData.company,
+                isManualEntry: gameData.isManualEntry,
+                gameVersion: GAME_VERSION,
+                deviceType: /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'iOS' : 'Other'
+            };
+
+            if (!gameData.isManualEntry && gameData.moleStats) {
+                gameStats.moleStats = gameData.moleStats;
+            }
+
+            await Promise.all([
+                // Save analytics
+                push(ref(database, 'gameAnalytics'), gameStats),
+                // Save to scores with same gameId
+                push(ref(database, 'scores'), {
+                    gameId: gameId,
+                    score: gameData.score,
+                    name: gameData.name,
+                    company: gameData.company,
+                    timestamp: gameData.timestamp,
+                    isManualEntry: gameData.isManualEntry
+                })
+            ]);
+
+            console.log("✅ Game data saved successfully with ID:", gameId);
+            return true;
+        } catch (error) {
+            console.error("❌ Failed to save game data:", error);
+            return false;
         }
+    };
 
-        await push(analyticsRef, gameStats);
-        console.log("✅ Game analytics saved successfully");
-        return true;
-    } catch (error) {
-        console.error("❌ Failed to save game analytics:", error);
-        return false;
-    }
-};
-
-// Export everything needed
-export {
-    app,
-    analytics,
-    database,
-    ref,
-    get,
-    set,
-    push,
-    query,
-    orderByChild,
-    connectDatabase,
-    saveGameAnalytics
-};
+    // Export everything needed
+    export {
+        app,
+        analytics,
+        database,
+        auth,
+        ref,
+        get,
+        set,
+        push,
+        query,
+        orderByChild,
+        connectDatabase,
+        saveGameAnalytics
+    };

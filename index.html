@@ -268,7 +268,8 @@
 
           // Get all scores
           const allScores = Object.values(scoresSnapshot.val())
-            .filter(score => !latestReset || score.timestamp > latestReset);
+            .filter(score => !latestReset || score.timestamp > latestReset)
+            .filter(score => !score.disqualified);
 
           //Update cache on successful fetch
           this.cachedScores = allScores;
@@ -379,7 +380,7 @@
           const playerQualifies = scores.length < 10 || this.score > scores[9].score;
 
           if (playerQualifies) {
-            let name = promptForNonEmpty("New high score! Enter your first name and last initial:");
+            let name = promptForNonEmpty("New high score!\n\nEnter your FIRST NAME and LAST INITIAL (e.g. John D.):");
             let company = promptForNonEmpty("Enter your company name:");
 
             await this.saveHighScore(this.score, name, company);
@@ -527,7 +528,14 @@
           fill: '#000',
           backgroundColor: '#fff'
         }).setOrigin(0.5, 0.5).setInteractive();
-        this.manualScoreButton = this.add.text(boxX + boxWidth / 2, boxY + 460, ' Manual Score Entry ', {
+        this.manualScoreButton = this.add.text(boxX + boxWidth * .57, boxY + 460, ' Manual Score Entry ', {
+          fontSize: '16px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000',
+          backgroundColor: '#fff'
+        }).setOrigin(0.5, 0.5).setInteractive();
+        this.disqualifyButton = this.add.text(boxX + boxWidth * 0.31, boxY + 460, ' DQ / Remove ', {
           fontSize: '16px',
           fontFamily: '"Pixelify Sans"',
           fontStyle: 'bold',
@@ -550,6 +558,58 @@
             }
           } else {
             alert("Incorrect PIN. Contact Tyson if you need the PIN.");
+          }
+        });
+
+        this.disqualifyButton.on('pointerdown', async () => {
+          let pin = prompt("Enter 4-digit PIN:");
+          if (hashPin(pin) === VALID_PIN_HASH) {
+            try {
+              const scores = await this.getHighScores();
+              let scoreList = "Select score to disqualify:\n\n";
+              scores.forEach((score, index) => {
+                scoreList += `${index + 1}. ${score.name} (${score.company}) - ${score.score} pts\n`;
+              });
+
+              let choice = prompt(scoreList + "\nEnter number (1-" + scores.length + "):");
+              if (choice && !isNaN(choice) && choice > 0 && choice <= scores.length) {
+                const selectedScore = scores[parseInt(choice) - 1];
+
+                const confirmMessage = `⚠️ WARNING: You are about to remove this score:\n\n` +
+                  `Player: ${selectedScore.name}\n` +
+                  `Company: ${selectedScore.company}\n` +
+                  `Score: ${selectedScore.score} pts\n\n` +
+                  `This action cannot be undone.\n` +
+                  `Are you sure you want to proceed?`;
+
+                if (confirm(confirmMessage)) {
+                  // Find the score's key in the database
+                  const scoresRef = ref(database, 'scores');
+                  const snapshot = await get(scoresRef);
+                  let scoreKey;
+                  snapshot.forEach(childSnapshot => {
+                    const score = childSnapshot.val();
+                    if (score.timestamp === selectedScore.timestamp &&
+                      score.name === selectedScore.name &&
+                      score.company === selectedScore.company) {
+                      scoreKey = childSnapshot.key;
+                    }
+                  });
+
+                  if (scoreKey) {
+                    await set(ref(database, `scores/${scoreKey}/disqualified`), true);
+                    alert("Score successfully disqualified.");
+                    const updatedScores = await this.getHighScores();
+                    this.updateHighScoreDisplay(updatedScores);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error disqualifying score:", error);
+              alert("Error disqualifying score. Please try again.");
+            }
+          } else {
+            alert("Incorrect PIN.");
           }
         });
 
@@ -576,9 +636,9 @@
         this.manualScoreButton.on('pointerdown', async () => {
           let pin = prompt("Enter 4-digit PIN:");
           if (hashPin(pin) === VALID_PIN_HASH) {
-            let name = promptForManualEntry("Enter player name:");
+            let name = promptForManualEntry("FIRST NAME and LAST INITIAL (e.g. John D.):", "John D.");
             if (name === null) return; // User cancelled
-            let company = promptForManualEntry("Enter company name:");
+            let company = promptForManualEntry("COMPANY NAME:");
             if (company === null) return; // User cancelled
             let score = promptForManualEntry("Enter score:");
             if (score === null) return; // User cancelled
@@ -614,6 +674,7 @@
           this.runnerUpDisplay.destroy();
           this.startButton.destroy();
           this.gameLengthButton.destroy();
+          this.disqualifyButton.destroy();
           this.resetHSButton.destroy();
           this.manualScoreButton.destroy();
           titleMole.destroy();
