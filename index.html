@@ -190,7 +190,9 @@
         return `${pos}. ${name} ${company} ${scoreNum} pts`;
       }
 
-      create() {
+      async create() {
+        await this.loadGameSettings();
+        
         this.add.image(400, 300, 'background');
 
         // Updated hole positions.
@@ -238,7 +240,7 @@
         }
 
         console.log("✅ Cleanup complete");
-        
+
         // Call parent destroy
         super.destroy();
       }
@@ -365,6 +367,20 @@
             { name: "THANK", company: "YOU", score: 0 },
             { name: "FOR", company: "PLAYING", score: 0 }
           ];
+        }
+      }
+
+      async loadGameSettings() {
+        try {
+          const settingsRef = ref(database, 'settings');
+          const snapshot = await get(settingsRef);
+          if (snapshot.exists()) {
+            const settings = snapshot.val();
+            this.gameDuration = settings.gameDuration || 30;
+            this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
+          }
+        } catch (error) {
+          console.error("Error loading settings:", error);
         }
       }
 
@@ -580,21 +596,22 @@
           backgroundColor: '#fff'
         }).setOrigin(0.5, 0.5).setInteractive();
 
-        this.gameLengthButton.on('pointerdown', () => {
+        this.gameLengthButton.on('pointerdown', async () => {
           let pin = prompt("Enter 4-digit PIN:");
           if (hashPin(pin) === VALID_PIN_HASH) {
             let newDuration = prompt("Enter game duration in seconds (30 or 45):", this.gameDuration);
             if (newDuration === "30" || newDuration === "45") {
-              this.gameDuration = parseInt(newDuration);
-              this.gameTime = this.gameDuration;
-              // Set total moles: 55 for 30s, 70 for 45s.
-              this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
-              this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
-            } else {
-              alert("Invalid duration. Keeping current game length.");
+              try {
+                await set(ref(database, 'settings/gameDuration'), parseInt(newDuration));
+                this.gameDuration = parseInt(newDuration);
+                this.gameTime = this.gameDuration;
+                this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
+                this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
+              } catch (error) {
+                console.error("Error saving settings:", error);
+                alert("Failed to save game length. Please try again.");
+              }
             }
-          } else {
-            alert("Incorrect PIN. Contact Tyson if you need the PIN.");
           }
         });
 

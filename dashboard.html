@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="assets/icon.png">
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="eG Innovations WAM Game Analytics Dashboard">
     <title>WAM Game Analytics Dashboard</title>
@@ -460,6 +460,15 @@
                         <option value="1.0.1">1.0.1</option>
                     </select>
                 </div>
+
+                <div class="filter-group">
+                    <label>Game Length:</label>
+                    <select id="gameLengthFilter">
+                        <option value="30">30 Seconds</option>
+                        <option value="45">45 Seconds</option>
+                        <option value="all">All Lengths</option>
+                    </select>
+                </div>
             </div>
 
             <div class="filter-row">
@@ -729,9 +738,13 @@
                         const passesDisqualifiedFilter = includeDisqualified || !score.disqualified;
                         const passesHighScoreFilter = includeNonHighScores || score.isHighScore;
 
+                        const lengthFilter = document.getElementById('gameLengthFilter').value;
+                        const passesLengthFilter = lengthFilter === 'all' ||
+                            (score.gameDuration && score.gameDuration.toString() === lengthFilter);
+
                         return passesTimeFilter && passesVersionFilter &&
                             passesManualFilter && passesDisqualifiedFilter &&
-                            passesHighScoreFilter;
+                            passesHighScoreFilter && passesLengthFilter;
                     });
 
                     updateDashboard(scores);
@@ -906,6 +919,8 @@
                 if (versions.length > 0) {
                     versionSelect.value = versions[0];
                 }
+
+                document.getElementById('gameLengthFilter').value = '30';
             }
 
             window.refreshData = () => {
