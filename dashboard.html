@@ -957,9 +957,15 @@
 
                     // Convert Set to Array and sort
                     const sortedVersions = Array.from(versions).sort((a, b) => {
-                        const [aVer] = a.split('.');
-                        const [bVer] = b.split('.');
-                        return bVer - aVer;  // Newest first
+                        const [aMajor, aMinor, aPatch] = a.split('.').map(Number);
+                        const [bMajor, bMinor, bPatch] = b.split('.').map(Number);
+
+                        // Compare major version
+                        if (bMajor !== aMajor) return bMajor - aMajor;
+                        // Compare minor version
+                        if (bMinor !== aMinor) return bMinor - aMinor;
+                        // Compare patch version
+                        return bPatch - aPatch;
                     });
 
                     const versionSelect = document.getElementById('versionFilter');
