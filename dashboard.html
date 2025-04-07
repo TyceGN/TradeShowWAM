@@ -894,33 +894,46 @@
                 element.nextElementSibling.classList.toggle('collapsed');
             }
 
-            function initializeFilters() {
-                // Set default time filter to "Since Last Reset"
-                document.getElementById('timeFilter').value = 'lastReset';
+            async function initializeFilters() {
+                try {
+                    // Get versions from analytics data
+                    const analyticsRef = ref(database, 'gameAnalytics');
+                    const snapshot = await get(analyticsRef);
+                    const versions = new Set();
 
-                // Get all available versions and set the latest as default
-                const versionSelect = document.getElementById('versionFilter');
-                const versions = ['1.0.1']; // Add your versions here
+                    if (snapshot.exists()) {
+                        Object.values(snapshot.val()).forEach(game => {
+                            if (game.gameVersion) {
+                                versions.add(game.gameVersion);
+                            }
+                        });
+                    }
 
-                // Sort versions by numeric value
-                versions.sort((a, b) => {
-                    const aNum = parseFloat(a.replace(/[^\d.]/g, ''));
-                    const bNum = parseFloat(b.replace(/[^\d.]/g, ''));
-                    return bNum - aNum;
-                });
+                    // Convert Set to Array and sort
+                    const sortedVersions = Array.from(versions).sort((a, b) => {
+                        const aNum = parseFloat(a.replace(/[^\d.]/g, ''));
+                        const bNum = parseFloat(b.replace(/[^\d.]/g, ''));
+                        return bNum - aNum;  // Newest versions first
+                    });
 
-                // Update version select options
-                versionSelect.innerHTML = `
-                    <option value="all">All Versions</option>
-                    ${versions.map(v => `<option value="${v}">${v}</option>`).join('')}
-                `;
+                    // Update version select options
+                    const versionSelect = document.getElementById('versionFilter');
+                    versionSelect.innerHTML = `
+            <option value="all">All Versions</option>
+            ${sortedVersions.map(v => `<option value="${v}">${v}</option>`).join('')}
+        `;
 
-                // Set latest version as default
-                if (versions.length > 0) {
-                    versionSelect.value = versions[0];
+                    // Set latest version as default
+                    if (sortedVersions.length > 0) {
+                        versionSelect.value = sortedVersions[0];
+                    }
+
+                    // Set other default filters
+                    document.getElementById('timeFilter').value = 'lastReset';
+                    document.getElementById('gameLengthFilter').value = '30';
+                } catch (error) {
+                    console.error("Error loading versions:", error);
                 }
-
-                document.getElementById('gameLengthFilter').value = '30';
             }
 
             window.refreshData = () => {
