@@ -194,7 +194,7 @@
 
       async create() {
         await this.loadGameSettings();
-        
+
         this.add.image(400, 300, 'background');
 
         // Updated hole positions.
@@ -388,42 +388,43 @@
 
       async saveHighScore(score, name, company, isManual = false) {
         try {
+          // Create gameId first
+          const gameId = push(ref(database, 'temp')).key;
+
           const commonData = {
+            gameId: gameId,  // Add this
             timestamp: new Date().toISOString(),
             score: score,
             name: name,
             company: company,
             gameDuration: this.gameDuration,
-            isManualEntry: isManual
-          };
-
-          // Only include mole stats for actual gameplay
-          if (!isManual) {
-            commonData.moleStats = {
+            isManualEntry: isManual,
+            moleStats: {  // Always include moleStats
               totalSpawned: this.totalMolesSpawned,
               goodSpawned: this.goodMolesSpawned,
               badSpawned: this.badMolesSpawned
-            };
-          }
+            }
+          };
 
-          // Save to scores list (minimal data needed for display)
+          // Save to scores WITH gameId
           const scoresRef = ref(database, 'scores');
           await push(scoresRef, {
+            gameId: gameId,  // Add this
             score: score,
             name: name,
             company: company,
             timestamp: commonData.timestamp,
-            isManualEntry: isManual
+            isManualEntry: isManual,
+            gameDuration: this.gameDuration  // Add this
           });
 
           // Save full analytics
           await saveGameAnalytics(commonData);
 
-          console.log("✅ Score and analytics saved successfully");
+          console.log("✅ Score and analytics saved with gameId:", gameId);
           return true;
         } catch (error) {
           console.error("❌ Error saving score:", error);
-          alert(`Unable to save score. Please take screenshot.`);
           return false;
         }
       }

@@ -454,6 +454,14 @@
                 </div>
 
                 <div class="filter-group">
+                    <label>Conference:</label>
+                    <select id="conferenceFilter">
+                        <option value="all">All Conferences</option>
+                        <option value="undefined">General Play</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label>Version:</label>
                     <select id="versionFilter">
                         <option value="all">All Versions</option>
@@ -560,6 +568,7 @@
                             <th>Score</th>
                             <th>Duration</th>
                             <th>Version</th>
+                            <th>Conference</th>
                             <th>Details</th>
                         </tr>
                     </thead>
@@ -648,40 +657,45 @@
         </script>
 
         <script type="module">
-            import { app, database, ref, get, query, orderByChild } from "./firebase-init.js";
+            import { app, database, ref, get, query, orderByChild, GAME_CONFERENCE } from "./firebase-init.js";
 
             async function loadWamGameData(timeFilter) {
                 const container = document.querySelector('.container');
                 container.classList.add('loading');
 
                 try {
-                    const [wamScores, wamAnalytics, wamResets] = await Promise.all([
+                    // Get all required data in parallel
+                    const [scoresSnapshot, analyticsSnapshot, resetsSnapshot, settingsSnapshot] = await Promise.all([
                         get(ref(database, 'scores')),
                         get(ref(database, 'gameAnalytics')),
-                        get(ref(database, 'resets'))
+                        get(ref(database, 'resets')),
+                        get(ref(database, 'settings'))
                     ]);
+
+                    const settings = settingsSnapshot.val() || { gameDuration: 30 };
 
                     // Create maps for easier lookup
                     const analyticsMap = new Map();
-                    Object.values(wamAnalytics.val() || {}).forEach(analytics => {
+                    Object.values(analyticsSnapshot.val() || {}).forEach(analytics => {
                         analyticsMap.set(analytics.gameId, analytics);
                     });
 
                     // Process scores with analytics data
                     let scores = [];
-                    Object.values(wamScores.val() || {}).forEach(score => {
+                    Object.values(scoresSnapshot.val() || {}).forEach(score => {
                         const analytics = analyticsMap.get(score.gameId) || {};
                         scores.push({
                             ...score,
                             moleStats: analytics.moleStats || {},
                             deviceType: analytics.deviceType,
-                            gameVersion: analytics.gameVersion
+                            gameVersion: analytics.gameVersion,
+                            conference: analytics.conference || 'undefined'
                         });
                     });
 
                     // Apply last reset filter if selected
                     if (timeFilter === 'lastReset') {
-                        const resets = Object.values(wamResets.val() || {});
+                        const resets = Object.values(resetsSnapshot.val() || {});
                         const lastReset = resets.reduce((latest, reset) => {
                             return (!latest || reset.timestamp > latest.timestamp) ? reset : latest;
                         }, null);
@@ -727,7 +741,13 @@
 
                         // Version filter
                         const versionFilter = document.getElementById('versionFilter').value;
-                        const passesVersionFilter = versionFilter === 'all' || score.gameVersion === versionFilter;
+                        console.log('Version comparison:', {
+                            filter: versionFilter,
+                            scoreVersion: score.gameVersion,
+                            score: score
+                        });
+                        const passesVersionFilter = versionFilter === 'all' ||
+                            (score.gameVersion && score.gameVersion.toString() === versionFilter);
 
                         // Include/exclude filters
                         const includeManual = document.getElementById('includeManual').checked;
@@ -742,9 +762,21 @@
                         const passesLengthFilter = lengthFilter === 'all' ||
                             (score.gameDuration && score.gameDuration.toString() === lengthFilter);
 
+                        const conferenceFilter = document.getElementById('conferenceFilter').value;
+                        console.log('Conference comparison:', {
+                            filter: conferenceFilter,
+                            scoreConference: score.conference,
+                            score: score
+                        });
+                        const passesConferenceFilter =
+                            conferenceFilter === 'all' ||
+                            (conferenceFilter === 'undefined' && !score.conference) ||
+                            (score.conference && score.conference.toString() === conferenceFilter);
+
                         return passesTimeFilter && passesVersionFilter &&
                             passesManualFilter && passesDisqualifiedFilter &&
-                            passesHighScoreFilter && passesLengthFilter;
+                            passesHighScoreFilter && passesLengthFilter &&
+                            passesConferenceFilter;
                     });
 
                     updateDashboard(scores);
@@ -807,18 +839,21 @@
                 const allGamesBody = document.querySelector('#allGames tbody');
                 allGamesBody.innerHTML = '';
 
-                scores.forEach(score => {
-                    const row = allGamesBody.insertRow();
-                    row.innerHTML = `
-                    <td>${new Date(score.timestamp).toLocaleString()}</td>
-                    <td>${score.name}</td>
-                    <td>${score.company}</td>
-                    <td>${score.score}</td>
-                    <td>${score.gameDuration}s</td>
-                    <td>${score.gameVersion || 'N/A'}</td>
-                    <td>${score.moleStats ? `Good: ${score.moleStats.goodSpawned || 0} Bad: ${score.moleStats.badSpawned || 0}` : 'N/A'}</td>
-                `;
-                });
+                scores
+                    .sort((a, b) => b.score - a.score)
+                    .forEach(score => {
+                        const row = allGamesBody.insertRow();
+                        row.innerHTML = `
+                            <td>${new Date(score.timestamp).toLocaleString()}</td>
+                            <td>${score.name}</td>
+                            <td>${score.company}</td>
+                            <td>${score.score}</td>
+                            <td>${score.gameDuration}s</td>
+                            <td>${score.gameVersion || 'N/A'}</td>
+                            <td>${score.conference || 'General Play'}</td>
+                            <td>${score.moleStats ? `Good: ${score.moleStats.goodSpawned || 0} Bad: ${score.moleStats.badSpawned || 0}` : 'N/A'}</td>
+                        `;
+                    });
             }
 
             // Add search functionality to all games table
@@ -900,39 +935,48 @@
                     const analyticsRef = ref(database, 'gameAnalytics');
                     const snapshot = await get(analyticsRef);
                     const versions = new Set();
+                    const conferences = new Set();
 
                     if (snapshot.exists()) {
                         Object.values(snapshot.val()).forEach(game => {
-                            if (game.gameVersion) {
-                                versions.add(game.gameVersion);
-                            }
+                            if (game.gameVersion) versions.add(game.gameVersion);
+                            if (game.conference) conferences.add(game.conference);
                         });
                     }
 
+                    conferences.add(GAME_CONFERENCE);
+
+                    const conferenceSelect = document.getElementById('conferenceFilter');
+                    conferenceSelect.innerHTML = `
+                        <option value="all">All Conferences</option>
+                        <option value="undefined">General Play</option>
+                        ${Array.from(conferences).map(c => `<option value="${c}">${c}</option>`).join('')}
+                    `;
+                    // Set default to current conference
+                    conferenceSelect.value = GAME_CONFERENCE;
+
                     // Convert Set to Array and sort
                     const sortedVersions = Array.from(versions).sort((a, b) => {
-                        const aNum = parseFloat(a.replace(/[^\d.]/g, ''));
-                        const bNum = parseFloat(b.replace(/[^\d.]/g, ''));
-                        return bNum - aNum;  // Newest versions first
+                        const [aVer] = a.split('.');
+                        const [bVer] = b.split('.');
+                        return bVer - aVer;  // Newest first
                     });
 
-                    // Update version select options
                     const versionSelect = document.getElementById('versionFilter');
                     versionSelect.innerHTML = `
-            <option value="all">All Versions</option>
-            ${sortedVersions.map(v => `<option value="${v}">${v}</option>`).join('')}
-        `;
-
-                    // Set latest version as default
+                        <option value="all">All Versions</option>
+                        ${sortedVersions.map(v => `<option value="${v}">${v}</option>`).join('')}
+                    `;
+                    // Set default to newest version
                     if (sortedVersions.length > 0) {
                         versionSelect.value = sortedVersions[0];
                     }
 
-                    // Set other default filters
+                    // Set other defaults
                     document.getElementById('timeFilter').value = 'lastReset';
                     document.getElementById('gameLengthFilter').value = '30';
                 } catch (error) {
-                    console.error("Error loading versions:", error);
+                    console.error("Error loading filters:", error);
                 }
             }
 
@@ -967,7 +1011,7 @@
 
             window.exportCSV = function () {
                 const rows = document.querySelectorAll('#allGames tbody tr');
-                let csv = 'Timestamp,Name,Company,Score,Duration,Version,Good Moles,Bad Moles\n';
+                let csv = 'Timestamp,Name,Company,Score,Duration,Version,Conference,Good Moles,Bad Moles\n';
 
                 rows.forEach(row => {
                     // Only include visible rows (respecting current filters)
