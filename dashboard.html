@@ -53,7 +53,7 @@
 
         th,
         td {
-            padding: 8px;
+            padding: 4px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
@@ -72,8 +72,7 @@
         }
 
         .filter-group {
-            flex: 1;
-            /* Allow filter groups to grow equally */
+            flex: 1;/
         }
 
         /* Add styles for filter labels */
@@ -340,17 +339,28 @@
             }
 
             .high-scores-table {
-                /* Reset the table display for mobile */
                 display: table;
-                overflow-x: visible;
+                font-size: 14px;
+                table-layout: fixed;
+                width: 100%;
+            }
+
+            .high-scores-table td {
+                padding: 4px 4px;
+                overflow: hidden;
+                text-overflow: ellipsis;
                 white-space: normal;
+                /* Allow text to wrap */
+                word-break: break-word;
+                /* Break long words if needed */
             }
 
             .high-scores-table th:nth-child(4),
             /* Score column */
             .high-scores-table td:nth-child(4) {
                 text-align: right;
-                padding-right: 15px;
+                padding: 4px 4px;
+                white-space: nowrap;
             }
 
             /* Hide less important columns on mobile */
@@ -366,7 +376,7 @@
             /* Make rank column compact */
             .high-scores-table th:first-child,
             .high-scores-table td:first-child {
-                width: 40px;
+                width: 20px;
                 text-align: center;
             }
 
@@ -394,7 +404,35 @@
                 /* Allow text to wrap */
             }
 
+            /* Column widths */
+            /* Rank */
+            .high-scores-table td:nth-child(1) {
+                width: 10%;
+            }
+
+            /* Name */
+            .high-scores-table td:nth-child(2) {
+                width: 35%;
+            }
+
+            /* Company */
+            .high-scores-table td:nth-child(3) {
+                width: 35%;
+            }
+
+            /* Score */
+            .high-scores-table td:nth-child(4) {
+                width: 20%;
+            }
+
+            /* Ensure score alignment */
+            .high-scores-table td:nth-child(4) {
+                text-align: right;
+                padding-right: 8px;
+            }
+
             /* Hide less important columns on mobile */
+            .mobile-hide,
             #allGames th:nth-child(5),
             #allGames td:nth-child(5),
             #allGames th:nth-child(6),
@@ -709,6 +747,12 @@
                     if (timeFilter === 'betweenResets') {
                         const startResetId = document.getElementById('startReset').value;
                         const endResetId = document.getElementById('endReset').value;
+
+                        const resets = Object.entries(resetsSnapshot.val() || {}).map(([id, reset]) => ({
+                            id,
+                            ...reset
+                        }));
+
                         const startReset = resets.find(r => r.id === startResetId);
                         const endReset = resets.find(r => r.id === endResetId);
 
