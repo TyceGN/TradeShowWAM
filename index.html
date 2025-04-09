@@ -633,41 +633,37 @@
               if (choice && !isNaN(choice) && choice > 0 && choice <= scores.length) {
                 const selectedScore = scores[parseInt(choice) - 1];
 
-                const confirmMessage = `⚠️ WARNING: You are about to remove this score:\n\n` +
-                  `Player: ${selectedScore.name}\n` +
-                  `Company: ${selectedScore.company}\n` +
-                  `Score: ${selectedScore.score} pts\n\n` +
-                  `This action cannot be undone.\n` +
-                  `Are you sure you want to proceed?`;
-
-                if (confirm(confirmMessage)) {
-                  // Find the score's key in the database
+                if (confirm(`Are you sure you want to remove this score?\n\n${selectedScore.name} (${selectedScore.company})\nScore: ${selectedScore.score}`)) {
+                  // More precise score matching
                   const scoresRef = ref(database, 'scores');
                   const snapshot = await get(scoresRef);
-                  let scoreKey;
+                  let scoreKey = null;
+
                   snapshot.forEach(childSnapshot => {
                     const score = childSnapshot.val();
-                    if (score.timestamp === selectedScore.timestamp &&
+                    if (score.score === selectedScore.score &&
                       score.name === selectedScore.name &&
-                      score.company === selectedScore.company) {
+                      score.company === selectedScore.company &&
+                      score.gameId === selectedScore.gameId) { // Added gameId check
                       scoreKey = childSnapshot.key;
+                      return true; // Exit forEach
                     }
                   });
 
                   if (scoreKey) {
                     await set(ref(database, `scores/${scoreKey}/disqualified`), true);
-                    alert("Score successfully disqualified.");
+                    alert("Score successfully removed.");
                     const updatedScores = await this.getHighScores();
                     this.updateHighScoreDisplay(updatedScores);
+                  } else {
+                    throw new Error("Score not found in database");
                   }
                 }
               }
             } catch (error) {
-              console.error("Error disqualifying score:", error);
-              alert("Error disqualifying score. Please try again.");
+              console.error("Error removing score:", error);
+              alert("Failed to remove score. Please try again.");
             }
-          } else {
-            alert("Incorrect PIN.");
           }
         });
 

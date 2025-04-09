@@ -860,24 +860,47 @@
                 document.getElementById('avgScore').textContent = stats.averageScore.toFixed(1);
                 document.getElementById('highScoreCount').textContent = stats.highScoreCount.toLocaleString();
 
+                // Helper function to clean strings (same as in index.html)
+                const cleanString = (str) => {
+                    return str
+                        .toLowerCase()
+                        .replace(/[^\w\s]/g, '')  // Remove punctuation
+                        .replace(/\s+/g, '')      // Remove all spaces
+                        .trim();
+                };
+
+                // Group by player and keep highest score
+                const playerMap = new Map();
+                scores.forEach(score => {
+                    const cleanName = cleanString(score.name);
+                    const cleanCompany = cleanString(score.company);
+                    const playerKey = `${cleanName}${cleanCompany}`;
+
+                    if (!playerMap.has(playerKey) || playerMap.get(playerKey).score < score.score) {
+                        playerMap.set(playerKey, score);
+                    }
+                });
+
+                // Convert to array and sort by score
+                const uniqueScores = Array.from(playerMap.values())
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
                 // Update high scores table
                 const highScoresBody = document.querySelector('#highScores tbody');
                 highScoresBody.innerHTML = '';
 
-                scores
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, 10)
-                    .forEach((score, index) => {
-                        const row = highScoresBody.insertRow();
-                        row.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td>${score.name}</td>
-                            <td>${score.company}</td>
-                            <td>${score.score.toLocaleString()}</td>
-                            <td class="mobile-hide">${new Date(score.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td class="mobile-hide">${score.isManualEntry ? 'Manual' : 'Game'}</td>
-                        `;
-                    });
+                uniqueScores.forEach((score, index) => {
+                    const row = highScoresBody.insertRow();
+                    row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${score.name}</td>
+            <td>${score.company}</td>
+            <td>${score.score.toLocaleString()}</td>
+            <td class="mobile-hide">${new Date(score.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+            <td class="mobile-hide">${score.isManualEntry ? 'Manual' : 'Game'}</td>
+        `;
+                });
 
                 // Update all games table
                 const allGamesBody = document.querySelector('#allGames tbody');
