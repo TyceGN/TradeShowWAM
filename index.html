@@ -251,8 +251,7 @@
       handleVisibilityChange = () => {
         if (document.hidden && this.scene.isActive() && this.gameActive) {
           if (this.bgMusic) {
-            this.bgMusic.stop();  // Changed from pause() to stop()
-            this.bgMusic.destroy();  // Added cleanup
+            this.bgMusic.pause(); // Just pause instead of destroy
           }
           this.scene.pause();
           this.scene.launch('PauseScene');
@@ -262,8 +261,7 @@
       handleBlur = () => {
         if (this.scene.isActive() && this.gameActive) {
           if (this.bgMusic) {
-            this.bgMusic.stop();  // Changed from pause() to stop()
-            this.bgMusic.destroy();  // Added cleanup
+            this.bgMusic.pause();  // Added cleanup
           }
           this.scene.pause();
           this.scene.launch('PauseScene');
@@ -651,10 +649,32 @@
                   });
 
                   if (scoreKey) {
-                    await set(ref(database, `scores/${scoreKey}/disqualified`), true);
+                    // Get the gameId of the disqualified score
+                    const gameId = selectedScore.gameId;
+
+                    // Perform both updates in parallel
+                    await Promise.all([
+                      // 1. Update in scores collection
+                      set(ref(database, `scores/${scoreKey}/disqualified`), true),
+
+                      // 2. Find and update in gameAnalytics collection 
+                      get(ref(database, 'gameAnalytics')).then(analyticsSnapshot => {
+                        if (analyticsSnapshot.exists()) {
+                          analyticsSnapshot.forEach(childSnapshot => {
+                            const analytics = childSnapshot.val();
+                            if (analytics.gameId === gameId) {
+                              set(ref(database, `gameAnalytics/${childSnapshot.key}/disqualified`), true);
+                            }
+                          });
+                        }
+                      })
+                    ]);
+
                     alert("Score successfully removed.");
+                    this.cachedScores = [];
                     const updatedScores = await this.getHighScores();
-                    this.updateHighScoreDisplay(updatedScores);
+                    const filteredScores = updatedScores.filter(score => score.gameId !== gameId);
+                    this.updateHighScoreDisplay(filteredScores);
                   } else {
                     throw new Error("Score not found in database");
                   }
@@ -846,6 +866,7 @@
         this.moles.clear(true, true);
         let scores = await this.getHighScores();
         let qualifies = (scores.length < 10 || this.score > scores[scores.length - 1].score);
+
         if (qualifies) {
           this.sound.play('highscore', { volume: 0.6 });
           const boxWidth = 500;
@@ -857,13 +878,19 @@
           graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
           graphics.lineStyle(4, 0xF29305, 1);
           graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
-          this.add.text(400, 300, 'NEW HIGH SCORE!', {
+
+          // Determine if it's #1 or Top 10
+          let isTopScore = scores.length === 0 || this.score > scores[0].score;
+          let messageText = isTopScore ? 'NEW HIGH SCORE!' : 'TOP 10 SCORE!';
+
+          this.add.text(400, 300, messageText, {
             fontSize: '60px',
             fontFamily: '"Pixelify Sans"',
             fill: '#0160E0',
             fontStyle: 'bold'
           }).setOrigin(0.5, 0.5);
-          // Wait 2500ms before prompting.
+
+          // Wait 2500ms before prompting
           this.time.addEvent({
             delay: 2500,
             callback: () => { this.checkHighScoreAndPrompt(); },
@@ -895,6 +922,19 @@
           mainMenuButton.on('pointerdown', () => {
             this.scene.restart();
           });
+          await saveGameAnalytics({
+            score: this.score,
+            name: '',  // Empty for non-qualifying scores
+            company: '', // Empty for non-qualifying scores
+            timestamp: new Date().toISOString(),
+            gameDuration: this.gameDuration,
+            isManualEntry: false,
+            moleStats: {
+              totalSpawned: this.totalMolesSpawned,
+              goodSpawned: this.goodMolesSpawned,
+              badSpawned: this.badMolesSpawned
+            }
+          });
         }
       }
 
@@ -921,7 +961,7 @@
 
         //iOS timing adjustment
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-          nextDelay = Math.max(nextDelay, 300);
+          nextDelay = Math.max(nextDelay, 280);
         }
 
         // Only schedule one event
@@ -1016,7 +1056,7 @@
         // Calculate current duration
         let moleDuration = minDuration + ((maxDuration - minDuration) * durationMultiplier);
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-          moleDuration = Math.max(moleDuration, 600); // Ensure minimum duration on iOS
+          moleDuration = Math.max(moleDuration, 550); // Ensure minimum duration on iOS
         }
 
         mole.on('pointerdown', () => {

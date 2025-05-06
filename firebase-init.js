@@ -12,8 +12,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
 
 //Game version
-const GAME_VERSION = '1.2.1';
-const GAME_CONFERENCE = 'NerdioCon';
+const GAME_VERSION = '1.2.2'; // Update this version number as needed
+const GAME_CONFERENCE = "NutanixNext"; // Set this to the conference name if needed
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -57,15 +57,15 @@ connectDatabase().catch(error => {
 
 const saveGameAnalytics = async (gameData) => {
     try {
-        // Generate a unique game ID
-        const gameId = push(ref(database, 'temp')).key;
+        // Use existing gameId if provided, otherwise generate one
+        const gameId = gameData.gameId || push(ref(database, 'temp')).key;
 
         const gameStats = {
             gameId: gameId,
             timestamp: gameData.timestamp,
             gameDuration: gameData.gameDuration,
-            finalScore: gameData.score,
-            player: gameData.name,
+            score: gameData.score,
+            name: gameData.name,
             company: gameData.company,
             isManualEntry: gameData.isManualEntry,
             gameVersion: GAME_VERSION,
@@ -77,28 +77,13 @@ const saveGameAnalytics = async (gameData) => {
             gameStats.moleStats = gameData.moleStats;
         }
 
-        await Promise.all([
-            // Save analytics
-            push(ref(database, 'gameAnalytics'), gameStats),
-            // Save to scores with additional fields
-            push(ref(database, 'scores'), {
-                gameId: gameId,
-                score: gameData.score,
-                name: gameData.name,
-                company: gameData.company,
-                timestamp: gameData.timestamp,
-                isManualEntry: gameData.isManualEntry,
-                gameDuration: gameData.gameDuration,
-                gameVersion: GAME_VERSION,    // Add this
-                conference: GAME_CONFERENCE,   // Add this
-                moleStats: gameData.moleStats // Add this
-            })
-        ]);
+        // Only save to gameAnalytics, not to scores again
+        await push(ref(database, 'gameAnalytics'), gameStats);
 
-        console.log("✅ Game data saved successfully with ID:", gameId);
-        return true;
+        console.log("✅ Game analytics saved successfully with ID:", gameId);
+        return gameId;
     } catch (error) {
-        console.error("❌ Failed to save game data:", error);
+        console.error("❌ Failed to save game analytics:", error);
         return false;
     }
 };

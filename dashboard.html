@@ -942,7 +942,11 @@
                 return {
                     totalGames: scores.length,
                     averageScore: scores.reduce((sum, score) => sum + score.score, 0) / scores.length || 0,
-                    highScoreCount: topScores.length // This will be 10 or less depending on filtered results
+                    // Count scores where name and company were provided (indicating they qualified for high score entry)
+                    highScoreCount: scores.filter(score =>
+                        score.name && score.name.trim() !== '' &&
+                        score.company && score.company.trim() !== ''
+                    ).length
                 };
             }
 
