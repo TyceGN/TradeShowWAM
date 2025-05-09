@@ -378,7 +378,7 @@
           if (snapshot.exists()) {
             const settings = snapshot.val();
             this.gameDuration = settings.gameDuration || 30;
-            this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
+            this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 75;
           }
         } catch (error) {
           console.error("Error loading settings:", error);
@@ -973,7 +973,6 @@
         });
       }
 
-      // Find the current spawnMole() method and replace it entirely with this version
       spawnMole() {
         if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
           return;
@@ -1035,6 +1034,8 @@
         mole.setOrigin(0.45, 1);
         mole.holeIndex = chosenIndex;
 
+        mole.spawnTime = this.time.now; // Record when the mole spawned
+
         // Use Phaser's timer for consistent animation
         this.tweens.add({
           targets: mole,
@@ -1065,9 +1066,20 @@
               this.sound.play('badtap', { volume: 0.6 });
               this.score -= 5;
             } else {
+              // Calculate time-based score for good moles
+              const elapsedTime = this.time.now - mole.spawnTime;
+
+              // Calculate points based on 300ms time slots
+              // 0-300ms: 10 points
+              // 301-600ms: 9 points
+              // 601ms+: 8 points (minimum)
+              const timeSlot = Math.floor(elapsedTime / 400);
+              const points = Math.max(10 - timeSlot, 8); // Don't go below 8 points
+
               this.sound.play('whacksound', { volume: 0.5 });
-              this.score += 10;
+              this.score += points;
             }
+
             this.holeOccupied[mole.holeIndex] = false;
             mole.destroy();
             this.scoreText.setText('Score: ' + this.score);

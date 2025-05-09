@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
 
 //Game version
-const GAME_VERSION = '1.2.2'; // Update this version number as needed
+const GAME_VERSION = '1.2.3'; // Update this version number as needed
 const GAME_CONFERENCE = "NutanixNext"; // Set this to the conference name if needed
 
 // Your web app's Firebase configuration
