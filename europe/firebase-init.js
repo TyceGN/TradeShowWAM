@@ -17,14 +17,14 @@ const GAME_CONFERENCE = "NutanixNext"; // Set this to the conference name if nee
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyD15s-kXdKfR57DazS_Kp7fjVAn_ZpKph0",
-    authDomain: "eg-innovations-wack-a-mole.firebaseapp.com",
-    databaseURL: "https://eg-innovations-wack-a-mole-default-rtdb.firebaseio.com", // Add this line
-    projectId: "eg-innovations-wack-a-mole",
-    storageBucket: "eg-innovations-wack-a-mole.firebasestorage.app",
-    messagingSenderId: "1027487200717",
-    appId: "1:1027487200717:web:aa57b2ab9aa315156a8084",
-    measurementId: "G-1ET6DY77DQ"
+  apiKey: "AIzaSyAHpMGVWOtxtG67de5C6Ne3QVjmsCNifWg",
+  authDomain: "whack-a-mole-eu.firebaseapp.com",
+  databaseURL: "https://whack-a-mole-eu-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "whack-a-mole-eu",
+  storageBucket: "whack-a-mole-eu.firebasestorage.app",
+  messagingSenderId: "1002166766859",
+  appId: "1:1002166766859:web:132ecc6369b9bf06caa60e",
+  measurementId: "G-SJMXTDV6GK"
 };
 
 // Initialize Firebase
