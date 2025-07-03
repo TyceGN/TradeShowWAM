@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Whack-a-Mole Europe</title>
+  <!-- Function as a Web App on iOS devices -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <!-- Recommended Google Fonts links for Pixelify Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <!-- You can leave WebFont Loader as-is if it does not support modules -->
+  <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- All our game code is now a module -->
+  <script type="module">
+    import {
+      app,
+      analytics,
+      database,
+      ref,
+      get,
+      set,
+      push,
+      query,
+      orderByChild,
+      saveGameAnalytics
+    } from "./firebase-init.js";
+
+    // Import Phaser as a module.
+    import * as Phaser from "https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.esm.js";
+
+    // Set up validation for High Score prompts
+    function promptForNonEmpty(message, defaultValue = "") {
+      let input = prompt(message, defaultValue);
+      while (input === null || input.trim() === "") {
+        alert("Please enter a valid value.");
+        input = prompt(message, defaultValue);
+      }
+      return input.trim();
+    }
+
+    function promptForManualEntry(message, defaultValue = "") {
+      let input = prompt(message, defaultValue);
+      if (input === null) return null; // Allow cancellation
+      return input.trim();
+    }
+
+    function hashPin(pin) {
+      return Array.from(pin).reduce((hash, char) =>
+        (((hash << 5) - hash) + char.charCodeAt(0)) | 0
+        , 0).toString(16);
+    }
+
+    class PauseScene extends Phaser.Scene {
+      constructor() {
+        super({ key: 'PauseScene' });
+      }
+
+      create() {
+        // Create an overlay that's 10px smaller than the game canvas (800x600)
+        let overlay = this.add.graphics();
+        overlay.fillStyle(0xF29305, 1); // orange color
+        overlay.fillRect(10, 10, 800 - 20, 600 - 20);
+        overlay.lineStyle(8, 0x000000, 1); // white stroke, 8 pixels wide
+        overlay.strokeRect(10, 10, 800 - 20, 600 - 20);
+
+        // Add PAUSED text centered on the screen.
+        this.add.text(400, 250, 'PAUSED', {
+          fontSize: '64px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000'
+        }).setOrigin(0.5, 0.5);
+
+        // Add "Resume" button.
+        let resumeButton = this.add.text(400, 350, '|                  Resume                  |', {
+          fontSize: '36px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff',
+          backgroundColor: '#000'
+        }).setOrigin(0.5, 0.5).setInteractive();
+
+        // Add "Return to Main Menu" button.
+        let menuButton = this.add.text(400, 420, '|  Return to Main Menu  |', {
+          fontSize: '36px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff',
+          backgroundColor: '#000'
+        }).setOrigin(0.5, 0.5).setInteractive();
+
+        // When "Resume" is tapped, stop PauseScene and resume GameScene.
+        resumeButton.on('pointerdown', () => {
+          let gameScene = this.scene.get('GameScene');
+          if (gameScene.bgMusic) {
+            gameScene.bgMusic.resume();
+          }
+          this.scene.stop(); // stops PauseScene
+          this.scene.resume('GameScene');
+        });
+
+        // When "Return to Main Menu" is tapped, stop both scenes and restart GameScene.
+        menuButton.on('pointerdown', () => {
+          let gameScene = this.scene.get('GameScene');
+          if (gameScene.bgMusic) {
+            gameScene.bgMusic.stop(); // Stop music completely
+          }
+          gameScene.gameActive = false; // Reset game active state
+          this.scene.stop('GameScene'); // stop the game scene
+          this.scene.stop(); // stop PauseScene
+          this.scene.start('GameScene'); // restart GameScene (which shows the start menu)
+        });
+      }
+    }
+
+    const VALID_PIN_HASH = '168d20';
+
+    class GameScene extends Phaser.Scene {
+      constructor() {
+        super({ key: 'GameScene' });
+        this.gameDuration = 30;
+        this.totalMolesToSpawn = 52;
+        this.cachedScores = [];
+        this.lastSuccessfulFetch = null;
+        // Only track spawned moles
+        this.goodMolesSpawned = 0;
+        this.badMolesSpawned = 0;
+        this.gameActive = false;
+      }
+
+      // init() resets game state each time the scene starts/restarts.
+      init() {
+        this.score = 0;
+        this.gameTime = this.gameDuration;
+        this.totalMolesSpawned = 0;
+        this.goodMolesSpawned = 0;
+        this.badMolesSpawned = 0;
+      }
+
+      preload() {
+        this.load.image('background', 'assets/background.png');
+        this.load.image('instructions', 'assets/instructions.png');
+        this.load.image('titlemole', 'assets/titlemole.png');
+        // Good mole images.
+        this.load.image('mole1', 'assets/mole1.png');
+        this.load.image('mole2', 'assets/mole2.png');
+        this.load.image('mole3', 'assets/mole3.png');
+        this.load.image('mole4', 'assets/mole4.png');
+        this.load.image('mole5', 'assets/mole5.png');
+        this.load.image('mole6', 'assets/mole6.png');
+        this.load.image('mole7', 'assets/mole7.png');
+        this.load.image('mole8', 'assets/mole8.png');
+        this.load.image('mole9', 'assets/mole9.png');
+        this.load.image('mole10', 'assets/mole10.png');
+        // Bad mole images.
+        this.load.image('badmole1', 'assets/badmole1.png');
+        this.load.image('badmole2', 'assets/badmole2.png');
+        this.load.image('badmole3', 'assets/badmole3.png');
+        this.load.image('badmole4', 'assets/badmole4.png');
+        // Background music.
+        this.load.audio('bgMusic30', '/assets/bgMusic30.mp3');
+        this.load.audio('bgMusic45', '/assets/bgMusic45.mp3');
+        // Additional sounds.
+        this.load.audio('startsound', '/assets/startsound.mp3');
+        this.load.audio('gameoverSound', '/assets/gameover.mp3');
+        this.load.audio('whacksound', '/assets/whacksound.mp3');
+        this.load.audio('highscore', '/assets/highscore.mp3');
+        this.load.audio('badtap', '/assets/badtap.mp3');
+      }
+
+      formatScore(position, score) {
+        const pos = position < 10 ? ` ${position}` : position;
+        const name = score.name.substring(0, 12).padEnd(12, ' ');
+        const company = score.company.substring(0, 18).padEnd(18, ' ');
+        const scoreNum = score.score.toString().padStart(3, ' ');
+        return `${pos}. ${name} ${company} ${scoreNum} pts`;
+      }
+
+      async create() {
+        await this.loadGameSettings();
+
+        this.add.image(400, 300, 'background');
+
+        // Updated hole positions.
+        this.holePositions = [
+          { x: 110, y: 500 },
+          { x: 385, y: 500 },
+          { x: 660, y: 500 },
+          { x: 130, y: 362 },
+          { x: 405, y: 362 },
+          { x: 684, y: 362 },
+          { x: 120, y: 247 },
+          { x: 395, y: 247 },
+          { x: 670, y: 247 }
+        ];
+        this.holeOccupied = new Array(this.holePositions.length).fill(false);
+
+        this.moleKeys = ['mole1', 'mole2', 'mole3', 'mole4', 'mole5', 'mole6', 'mole7', 'mole8', 'mole9', 'mole10'];
+        this.badMoleKeys = ['badmole1', 'badmole2', 'badmole3', 'badmole4'];
+
+        this.createUI();
+        this.moles = this.physics.add.group();
+        this.startMenu();
+
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        window.addEventListener('blur', this.handleBlur);
+      }
+
+      destroy() {
+        console.log("🧹 Cleaning up resources...");
+        // Clean up music
+        if (this.bgMusic) {
+          this.bgMusic.destroy();
+        }
+
+        // Remove all event listeners
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        window.removeEventListener('blur', this.handleBlur);
+
+        // Clear all timers
+        this.time.removeAllEvents();
+
+        // Destroy all moles
+        if (this.moles) {
+          this.moles.clear(true, true);
+        }
+
+        console.log("✅ Cleanup complete");
+
+        // Call parent destroy
+        super.destroy();
+      }
+
+      handleVisibilityChange = () => {
+        if (document.hidden && this.scene.isActive() && this.gameActive) {
+          if (this.bgMusic) {
+            this.bgMusic.pause(); // Just pause instead of destroy
+          }
+          this.scene.pause();
+          this.scene.launch('PauseScene');
+        }
+      };
+
+      handleBlur = () => {
+        if (this.scene.isActive() && this.gameActive) {
+          if (this.bgMusic) {
+            this.bgMusic.pause();  // Added cleanup
+          }
+          this.scene.pause();
+          this.scene.launch('PauseScene');
+        }
+      };
+
+      createUI() {
+        console.log('Creating UI elements with Pixelify Sans');
+        this.scoreText = this.add.text(16, 16, 'Score: 0', {
+          fontSize: '32px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff'
+        });
+        this.timerText = this.add.text(400, 100, 'Time: ' + this.gameTime, {
+          fontSize: '42px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#F29305'
+        }).setOrigin(0.5, 0.5);
+      }
+
+      // Replace the existing high score functions in GameScene
+      async getHighScores() {
+        try {
+          const resetRef = ref(database, 'resets');
+          const resetSnapshot = await get(resetRef);
+          let latestReset = null;
+
+          if (resetSnapshot.exists()) {
+            const resets = Object.values(resetSnapshot.val());
+            latestReset = resets.reduce((latest, reset) => {
+              return (!latest || reset.timestamp > latest) ? reset.timestamp : latest;
+            }, null);
+          }
+
+          //Get scores after the latest reset
+          const scoresRef = ref(database, 'scores');
+          const scoresSnapshot = await get(scoresRef);
+
+          if (!scoresSnapshot.exists()) {
+            console.log("No scores loaded due to database error.");
+            return this.cachedScores;
+          }
+
+          // Get all scores
+          const allScores = Object.values(scoresSnapshot.val())
+            .filter(score => !latestReset || score.timestamp > latestReset)
+            .filter(score => !score.disqualified);
+
+          //Update cache on successful fetch
+          this.cachedScores = allScores;
+          this.lastSuccessfulFetch = new Date();
+
+          // Helper function to clean strings
+          const cleanString = (str) => {
+            return str
+              .toLowerCase()
+              .replace(/[^\w\s]/g, '')  // Remove punctuation
+              .replace(/\s+/g, '')      // Remove all spaces
+              .trim();
+          };
+
+          // Group by player (name + company) and keep highest score
+          const playerMap = new Map();
+          allScores.forEach(score => {
+            const cleanName = cleanString(score.name);
+            const cleanCompany = cleanString(score.company);
+            const playerKey = `${cleanName}${cleanCompany}`;
+
+            if (!playerMap.has(playerKey) || playerMap.get(playerKey).score < score.score) {
+              playerMap.set(playerKey, score);
+            }
+          });
+
+          // Convert to array and sort by score
+          const uniqueScores = Array.from(playerMap.values());
+          uniqueScores.sort((a, b) => b.score - a.score);
+
+          return uniqueScores.slice(0, 10); // Return top 10
+        } catch (error) {
+          console.error("Database error:", error);
+
+          if (error.code === "PERMISSION_DENIED") {
+            alert("Unable to access scores. Please check with administrator.");
+          } else if (error.code === "NETWORK_ERROR") {
+            alert("Network connection lost. Using cached scores.");
+          } else {
+            alert("Unable to retrieve scores. Using cached scores.");
+          }
+          if (this.cachedScores.length > 0) {
+            console.log("Using cached scores from: ", this.lastSuccessfulFetch);
+            return this.cachedScores.slice(0, 10);
+          }
+
+          //Absolute fallback
+          return [
+            { name: "OFFLINE", company: "MODE", score: 0 },
+            { name: "NO", company: "DATA", score: 0 },
+            { name: "AVAILABLE", company: "", score: 0 },
+            { name: "PLEASE", company: "TRY", score: 0 },
+            { name: "AGAIN", company: "LATER", score: 0 },
+            { name: "OR", company: "CONTACT", score: 0 },
+            { name: "ADMINISTRATOR", company: "", score: 0 },
+            { name: "FOR", company: "ASSISTANCE", score: 0 },
+            { name: "THANK", company: "YOU", score: 0 },
+            { name: "FOR", company: "PLAYING", score: 0 }
+          ];
+        }
+      }
+
+      async loadGameSettings() {
+        try {
+          const settingsRef = ref(database, 'settings');
+          const snapshot = await get(settingsRef);
+          if (snapshot.exists()) {
+            const settings = snapshot.val();
+            this.gameDuration = settings.gameDuration || 30;
+            this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 75;
+          }
+        } catch (error) {
+          console.error("Error loading settings:", error);
+        }
+      }
+
+      async saveHighScore(score, name, company, isManual = false) {
+        try {
+          // Create gameId first
+          const gameId = push(ref(database, 'temp')).key;
+
+          const commonData = {
+            gameId: gameId,  // Add this
+            timestamp: new Date().toISOString(),
+            score: score,
+            name: name,
+            company: company,
+            gameDuration: this.gameDuration,
+            isManualEntry: isManual,
+            moleStats: {  // Always include moleStats
+              totalSpawned: this.totalMolesSpawned,
+              goodSpawned: this.goodMolesSpawned,
+              badSpawned: this.badMolesSpawned
+            }
+          };
+
+          // Save to scores WITH gameId
+          const scoresRef = ref(database, 'scores');
+          await push(scoresRef, {
+            gameId: gameId,  // Add this
+            score: score,
+            name: name,
+            company: company,
+            timestamp: commonData.timestamp,
+            isManualEntry: isManual,
+            gameDuration: this.gameDuration  // Add this
+          });
+
+          // Save full analytics
+          await saveGameAnalytics(commonData);
+
+          console.log("✅ Score and analytics saved with gameId:", gameId);
+          return true;
+        } catch (error) {
+          console.error("❌ Error saving score:", error);
+          return false;
+        }
+      }
+
+      async checkHighScoreAndPrompt() {
+        try {
+          const scores = await this.getHighScores();
+          const playerQualifies = scores.length < 10 || this.score > scores[9].score;
+
+          if (playerQualifies) {
+            let name = promptForNonEmpty("New high score!\n\nEnter your FIRST NAME and LAST INITIAL (e.g. John D.):");
+            let company = promptForNonEmpty("Enter your company name:");
+
+            await this.saveHighScore(this.score, name, company);
+            alert("High score recorded!");
+          }
+          this.scene.restart();
+        } catch (error) {
+          console.error("Error handling high score:", error);
+          this.scene.restart();
+        }
+      }
+      // Add after checkHighScoreAndPrompt() and before startMenu()
+
+      async updateHighScoreDisplay(scores) {
+        const boxWidth = 600;
+        const boxHeight = 500;
+        const boxX = (800 - boxWidth) / 2;
+        const boxY = (600 - boxHeight) / 2 + 30;
+        const highScoreBoxHeight = 290;
+
+        // Update top score
+        let topScoreText = scores[0]
+          ? this.formatScore(1, scores[0])
+          : ` 1.  ---          ---               0 pts`;
+
+        // Find and update the top score display
+        if (this.topScoreDisplay) {
+          this.topScoreDisplay.setText(topScoreText);
+        }
+
+        // Update runner-up scores
+        let runnerUpText = "";
+        for (let i = 1; i < 10; i++) {
+          if (scores[i]) {
+            runnerUpText += this.formatScore(i + 1, scores[i]) + "\n";
+          } else {
+            const pos = i + 1 < 10 ? ` ${i + 1}` : `${i + 1}`;
+            runnerUpText += `${pos}.  ---          ---               0 pts\n`;
+          }
+        }
+
+        // Find and update the runner-up display
+        if (this.runnerUpDisplay) {
+          this.runnerUpDisplay.setText(runnerUpText);
+        }
+      }
+
+      // Start menu: displays title, high scores (with new layout), and admin buttons.
+      async startMenu() {
+        const boxWidth = 600;
+        const boxHeight = 440;
+        const boxX = (800 - boxWidth) / 2;
+        const boxY = (600 - boxHeight) / 2;
+
+        this.menuGraphics = this.add.graphics();
+        this.menuGraphics.fillStyle(0xffffff, 1);
+        this.menuGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+        this.menuGraphics.lineStyle(4, 0xF29305, 1);
+        this.menuGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Title texts.
+        this.titleSmall = this.add.text(240, boxY + 30, 'eG Innovations Presents:', {
+          fontSize: '28px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#000'
+        }).setOrigin(0, 0.5);
+
+        const titleMole = this.add.image(205, boxY + 52, 'titlemole');
+        titleMole.setOrigin(0.5, 0.5);
+        titleMole.setDepth(100);
+        titleMole.setScale(0.85); // Adjust scale as needed
+
+        this.titleLarge = this.add.text(240, boxY + 70, 'IT Whack-A-Mole', {
+          fontSize: '50px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#000',
+          fontStyle: 'bold'
+        }).setOrigin(0, 0.5);
+
+        // High score box background (blue) enlarged to fit 10 scores and a header.
+        let highScoreBoxWidth = 460;
+        let highScoreBoxHeight = 280;  // Increased height.
+        this.highScoreBox = this.add.graphics();
+        this.highScoreBox.fillStyle(0x0160E0, 1);
+        this.highScoreBox.fillRect(400 - highScoreBoxWidth / 2, boxY + 235 - highScoreBoxHeight / 2, highScoreBoxWidth, highScoreBoxHeight);
+
+        // High score header ("HIGH SCORES") in white.
+        let highScoreHeader = this.add.text(400, boxY + 235 - highScoreBoxHeight / 2 + 10, "> > >     HIGH SCORES     < < <", {
+          fontSize: '32px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff'
+        }).setOrigin(0.5, 0);
+
+        // Top score (slot 1), slightly larger.
+        let scores = await this.getHighScores();
+        let topScoreText = "";
+        if (scores[0]) {
+          topScoreText = this.formatScore(1, scores[0]);
+        } else {
+          topScoreText = " 1.  ---          ---               0 pts";
+        }
+        this.topScoreDisplay = this.add.text(400 - highScoreBoxWidth / 2 + 20, boxY + 235 - highScoreBoxHeight / 2 + 55, topScoreText, {
+          fontSize: '16px',
+          fontFamily: '"Courier New", Courier, "Liberation Mono", monospace',
+          fontStyle: 'bold',
+          fill: '#ff0'
+        }).setOrigin(0, 0);
+
+        // Runner-up scores (slots 2-10).
+        let runnerUpText = "";
+        for (let i = 1; i < 10; i++) {
+          if (scores[i]) {
+            runnerUpText += this.formatScore(i + 1, scores[i]) + "\n";
+          } else {
+            const pos = i + 1 < 10 ? ` ${i + 1}` : `${i + 1}`;
+            runnerUpText += `${pos}.  ---          ---               0 pts\n`;
+          }
+        }
+        this.runnerUpDisplay = this.add.text(400 - highScoreBoxWidth / 2 + 20, boxY + 240 - highScoreBoxHeight / 2 + 80, runnerUpText, {
+          fontSize: '16px',
+          fontFamily: '"Courier New", Courier, "Liberation Mono", monospace',
+          fill: '#fff',
+          lineSpacing: 5
+        }).setOrigin(0, 0);
+
+        // "Start Game" button: white text on orange (#F29305) background.
+        this.startButton = this.add.text(400, boxY + boxHeight - 30, ' Start Game (' + this.gameDuration + ' seconds) ', {
+          fontSize: '40px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff',
+          backgroundColor: '#F29305'
+        }).setOrigin(0.5, 0.5).setInteractive();
+
+        // Admin buttons: "Game Length" at top left, "Reset High Scores" at top right.
+        this.gameLengthButton = this.add.text(boxX + 60, boxY + 460, ' Game Length ', {
+          fontSize: '16px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000',
+          backgroundColor: '#fff'
+        }).setOrigin(0.5, 0.5).setInteractive();
+        this.resetHSButton = this.add.text(boxX + boxWidth - 80, boxY + 460, ' Reset High Scores ', {
+          fontSize: '16px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000',
+          backgroundColor: '#fff'
+        }).setOrigin(0.5, 0.5).setInteractive();
+        this.manualScoreButton = this.add.text(boxX + boxWidth * .57, boxY + 460, ' Manual Score Entry ', {
+          fontSize: '16px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000',
+          backgroundColor: '#fff'
+        }).setOrigin(0.5, 0.5).setInteractive();
+        this.disqualifyButton = this.add.text(boxX + boxWidth * 0.31, boxY + 460, ' DQ / Remove ', {
+          fontSize: '16px',
+          fontFamily: '"Pixelify Sans"',
+          fontStyle: 'bold',
+          fill: '#000',
+          backgroundColor: '#fff'
+        }).setOrigin(0.5, 0.5).setInteractive();
+
+        this.gameLengthButton.on('pointerdown', async () => {
+          let pin = prompt("Enter 4-digit PIN:");
+          if (hashPin(pin) === VALID_PIN_HASH) {
+            let newDuration = prompt("Enter game duration in seconds (30 or 45):", this.gameDuration);
+            if (newDuration === "30" || newDuration === "45") {
+              try {
+                await set(ref(database, 'settings/gameDuration'), parseInt(newDuration));
+                this.gameDuration = parseInt(newDuration);
+                this.gameTime = this.gameDuration;
+                this.totalMolesToSpawn = (this.gameDuration === 30) ? 52 : 72;
+                this.startButton.setText("Start Game (" + this.gameDuration + " seconds)");
+              } catch (error) {
+                console.error("Error saving settings:", error);
+                alert("Failed to save game length. Please try again.");
+              }
+            }
+          }
+        });
+
+        this.disqualifyButton.on('pointerdown', async () => {
+          let pin = prompt("Enter 4-digit PIN:");
+          if (hashPin(pin) === VALID_PIN_HASH) {
+            try {
+              const scores = await this.getHighScores();
+              let scoreList = "Select score to disqualify:\n\n";
+              scores.forEach((score, index) => {
+                scoreList += `${index + 1}. ${score.name} (${score.company}) - ${score.score} pts\n`;
+              });
+
+              let choice = prompt(scoreList + "\nEnter number (1-" + scores.length + "):");
+              if (choice && !isNaN(choice) && choice > 0 && choice <= scores.length) {
+                const selectedScore = scores[parseInt(choice) - 1];
+
+                if (confirm(`Are you sure you want to remove this score?\n\n${selectedScore.name} (${selectedScore.company})\nScore: ${selectedScore.score}`)) {
+                  // More precise score matching
+                  const scoresRef = ref(database, 'scores');
+                  const snapshot = await get(scoresRef);
+                  let scoreKey = null;
+
+                  snapshot.forEach(childSnapshot => {
+                    const score = childSnapshot.val();
+                    if (score.score === selectedScore.score &&
+                      score.name === selectedScore.name &&
+                      score.company === selectedScore.company &&
+                      score.gameId === selectedScore.gameId) { // Added gameId check
+                      scoreKey = childSnapshot.key;
+                      return true; // Exit forEach
+                    }
+                  });
+
+                  if (scoreKey) {
+                    // Get the gameId of the disqualified score
+                    const gameId = selectedScore.gameId;
+
+                    // Perform both updates in parallel
+                    await Promise.all([
+                      // 1. Update in scores collection
+                      set(ref(database, `scores/${scoreKey}/disqualified`), true),
+
+                      // 2. Find and update in gameAnalytics collection 
+                      get(ref(database, 'gameAnalytics')).then(analyticsSnapshot => {
+                        if (analyticsSnapshot.exists()) {
+                          analyticsSnapshot.forEach(childSnapshot => {
+                            const analytics = childSnapshot.val();
+                            if (analytics.gameId === gameId) {
+                              set(ref(database, `gameAnalytics/${childSnapshot.key}/disqualified`), true);
+                            }
+                          });
+                        }
+                      })
+                    ]);
+
+                    alert("Score successfully removed.");
+                    this.cachedScores = [];
+                    const updatedScores = await this.getHighScores();
+                    const filteredScores = updatedScores.filter(score => score.gameId !== gameId);
+                    this.updateHighScoreDisplay(filteredScores);
+                  } else {
+                    throw new Error("Score not found in database");
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error removing score:", error);
+              alert("Failed to remove score. Please try again.");
+            }
+          }
+        });
+
+        this.resetHSButton.on('pointerdown', async () => {
+          let pin = prompt("Enter 4-digit PIN:");
+          if (hashPin(pin) === VALID_PIN_HASH) {
+            try {
+              const resetRef = ref(database, 'resets');
+              await push(resetRef, {
+                timestamp: new Date().toISOString()
+              });
+              alert("High scores reset successfully.");
+              const scores = await this.getHighScores();
+              this.updateHighScoreDisplay(scores);
+            } catch (error) {
+              console.error("Error resetting scores:", error);
+              alert("Error resetting high scores.");
+            }
+          } else {
+            alert("Incorrect PIN.");
+          }
+        });
+
+        this.manualScoreButton.on('pointerdown', async () => {
+          let pin = prompt("Enter 4-digit PIN:");
+          if (hashPin(pin) === VALID_PIN_HASH) {
+            let name = promptForManualEntry("FIRST NAME and LAST INITIAL (e.g. John D.):", "John D.");
+            if (name === null) return; // User cancelled
+            let company = promptForManualEntry("COMPANY NAME:");
+            if (company === null) return; // User cancelled
+            let score = promptForManualEntry("Enter score:");
+            if (score === null) return; // User cancelled
+            let duration = promptForManualEntry("Enter game duration (30 or 45):", "30");
+            if (duration === null) return; // User cancelled
+
+            if (isNaN(score) || score < 0 || (duration !== "30" && duration !== "45")) {
+              alert("Invalid score or duration entered.");
+              return;
+            }
+
+            try {
+              await this.saveHighScore(parseInt(score), name, company, true);
+              alert(`Score successfully added!\n\nDetails:\nPlayer: ${name}\nCompany: ${company}\nScore: ${score} pts.\nGame Duration: ${duration} secs.`);
+              const scores = await this.getHighScores();
+              this.updateHighScoreDisplay(scores);
+            } catch (error) {
+              console.error("Error adding manual score:", error);
+              alert("Failed to add score. Please try again.");
+            }
+          } else {
+            alert("Incorrect PIN.");
+          }
+        });
+
+        this.startButton.on('pointerdown', async () => {
+          this.menuGraphics.destroy();
+          this.titleSmall.destroy();
+          this.titleLarge.destroy();
+          this.highScoreBox.destroy();
+          highScoreHeader.destroy();
+          this.topScoreDisplay.destroy();
+          this.runnerUpDisplay.destroy();
+          this.startButton.destroy();
+          this.gameLengthButton.destroy();
+          this.disqualifyButton.destroy();
+          this.resetHSButton.destroy();
+          this.manualScoreButton.destroy();
+          titleMole.destroy();
+
+          this.sound.play('startsound');
+
+          // Display instructions image first—no music yet.
+          await new Promise(resolve => {
+            let instructionsImage = this.add.image(400, 300, 'instructions');
+            instructionsImage.setDepth(100); // ensure it's on top
+
+            // Wait 7 seconds, then destroy instructions...
+            this.time.addEvent({
+              delay: 7000,
+              callback: () => {
+                instructionsImage.destroy();
+                resolve();
+              },
+              callbackScope: this
+            });
+          });
+          // Then wait an additional 1 second before starting music and countdown.
+          await new Promise(resolve => {
+            this.time.addEvent({
+              delay: 1000,
+              callback: resolve,
+              callbackScope: this
+            });
+          });
+
+          // Start music and game
+          let musicKey = (this.gameDuration === 30) ? 'bgMusic30' : 'bgMusic45';
+          this.bgMusic = this.sound.add(musicKey, { loop: false, volume: 0.5 });
+          this.bgMusic.play();
+          this.startSequence();
+        });
+      }
+
+      startSequence() {
+        const boxWidth = 400;
+        const boxHeight = 150;
+        const boxX = (800 - boxWidth) / 2;
+        const boxY = (600 - boxHeight) / 2;
+        this.sequenceGraphics = this.add.graphics();
+        this.sequenceGraphics.fillStyle(0xffffff, 1);
+        this.sequenceGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+        this.sequenceGraphics.lineStyle(2, 0xff0000, 1);
+        this.sequenceGraphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        this.sequenceText = this.add.text(400, 300, 'Ready', {
+          fontSize: '60px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#000',
+          fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5);
+
+        this.time.addEvent({ delay: 1000, callback: () => { this.sequenceText.setText('Set'); } });
+        this.time.addEvent({ delay: 2000, callback: () => { this.sequenceText.setText('Go'); } });
+        this.time.addEvent({
+          delay: 3000,
+          callback: () => {
+            this.sequenceGraphics.destroy();
+            this.sequenceText.destroy();
+            this.time.addEvent({
+              delay: 1000,
+              callback: this.startGame,
+              callbackScope: this
+            });
+          }
+        });
+      }
+
+      startGame() {
+        this.gameActive = true;
+        this.pauseButton = this.add.text(525, 85, ' || ', {
+          fontSize: '32px',
+          fontFamily: '"Pixelify Sans"',
+          fill: '#fff',
+          backgroundColor: '#F29305'
+        }).setOrigin(1, 0).setInteractive();
+
+        this.pauseButton.on('pointerdown', () => {
+          if (this.bgMusic) {
+            this.bgMusic.pause();
+          }
+          this.scene.pause();
+          this.scene.launch('PauseScene');
+        });
+
+        this.initialGameTime = this.gameTime;
+        this.time.addEvent({
+          delay: 1000,
+          callback: () => {
+            this.gameTime--;
+            this.timerText.setText('Time: ' + this.gameTime);
+            if (this.gameTime <= 0) {
+              this.time.removeAllEvents();
+              this.time.addEvent({
+                delay: 500,
+                callback: async () => {
+                  await this.handleEndOfGame()
+                },
+                callbackScope: this
+              });
+            }
+          },
+          callbackScope: this,
+          loop: true
+        });
+        this.scheduleNextMole();
+      }
+
+      async handleEndOfGame() {
+        this.gameActive = false;
+        this.moles.clear(true, true);
+        let scores = await this.getHighScores();
+        let qualifies = (scores.length < 10 || this.score > scores[scores.length - 1].score);
+
+        if (qualifies) {
+          this.sound.play('highscore', { volume: 0.6 });
+          const boxWidth = 500;
+          const boxHeight = 150;
+          const boxX = (800 - boxWidth) / 2;
+          const boxY = (600 - boxHeight) / 2;
+          let graphics = this.add.graphics();
+          graphics.fillStyle(0xffffff, 1);
+          graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+          graphics.lineStyle(4, 0xF29305, 1);
+          graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+          // Determine if it's #1 or Top 10
+          let isTopScore = scores.length === 0 || this.score > scores[0].score;
+          let messageText = isTopScore ? 'NEW HIGH SCORE!' : 'TOP 10 SCORE!';
+
+          this.add.text(400, 300, messageText, {
+            fontSize: '60px',
+            fontFamily: '"Pixelify Sans"',
+            fill: '#0160E0',
+            fontStyle: 'bold'
+          }).setOrigin(0.5, 0.5);
+
+          // Wait 2500ms before prompting
+          this.time.addEvent({
+            delay: 2500,
+            callback: () => { this.checkHighScoreAndPrompt(); },
+            callbackScope: this
+          });
+        } else {
+          this.sound.play('gameoverSound', { volume: 0.5 });
+          const boxWidth = 400;
+          const boxHeight = 150;
+          const boxX = (800 - boxWidth) / 2;
+          const boxY = (600 - boxHeight) / 2;
+          let graphics = this.add.graphics();
+          graphics.fillStyle(0xffffff, 1);
+          graphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+          graphics.lineStyle(2, 0xff0000, 1);
+          graphics.strokeRect(boxX, boxY, boxWidth, boxHeight);
+          this.add.text(400, 300, 'Game Over!', {
+            fontSize: '60px',
+            fontFamily: '"Pixelify Sans"',
+            fill: '#f00',
+            fontStyle: 'bold'
+          }).setOrigin(0.5, 0.5);
+          let mainMenuButton = this.add.text(400, 400, 'Main Menu', {
+            fontSize: '32px',
+            fontFamily: '"Pixelify Sans"',
+            fill: '#fff',
+            backgroundColor: '#0160E0'
+          }).setOrigin(0.5, 0.5).setInteractive();
+          mainMenuButton.on('pointerdown', () => {
+            this.scene.restart();
+          });
+          await saveGameAnalytics({
+            score: this.score,
+            name: '',  // Empty for non-qualifying scores
+            company: '', // Empty for non-qualifying scores
+            timestamp: new Date().toISOString(),
+            gameDuration: this.gameDuration,
+            isManualEntry: false,
+            moleStats: {
+              totalSpawned: this.totalMolesSpawned,
+              goodSpawned: this.goodMolesSpawned,
+              badSpawned: this.badMolesSpawned
+            }
+          });
+        }
+      }
+
+      scheduleNextMole() {
+        if (this.gameTime <= 0 || this.totalMolesSpawned >= this.totalMolesToSpawn) {
+          return;
+        }
+        let minDelay = 200;
+        let maxDelay = 1200;
+        const gameProgress = 1 - (this.gameTime / this.initialGameTime);
+
+        // Exponential acceleration curve
+        const linearPart = gameProgress * 0.7;
+        const exponentialPart = Math.pow(gameProgress, 1.5) * 0.3;
+        const speedMultiplier = linearPart + exponentialPart;
+
+        const currentMax = maxDelay - ((maxDelay - minDelay) * speedMultiplier);
+        const currentMin = minDelay + ((500 - minDelay) * (1 - speedMultiplier));
+
+        let nextDelay = Phaser.Math.Between(
+          Math.floor(currentMin),
+          Math.floor(currentMax)
+        );
+
+        //iOS timing adjustment
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          nextDelay = Math.max(nextDelay, 280);
+        }
+
+        // Only schedule one event
+        this.time.addEvent({
+          delay: nextDelay,
+          callback: this.spawnMole,
+          callbackScope: this,
+          loop: false
+        });
+      }
+
+      spawnMole() {
+        if (this.totalMolesSpawned >= this.totalMolesToSpawn || this.gameTime <= 0) {
+          return;
+        }
+
+        // Pre-calculate total good and bad moles based on 80/20 split
+        const totalBadMoles = Math.floor(this.totalMolesToSpawn * 0.2);
+        const totalGoodMoles = this.totalMolesToSpawn - totalBadMoles;
+
+        // Determine if this should be a bad mole based on remaining quotas
+        let isBad;
+        if (this.totalMolesSpawned >= this.totalMolesToSpawn - 1) {
+          // Last mole - force to meet quota
+          isBad = (this.badMolesSpawned < totalBadMoles);
+        } else {
+          // Calculate remaining bad moles needed vs remaining slots
+          const remainingMoles = this.totalMolesToSpawn - this.totalMolesSpawned;
+          const remainingBadNeeded = totalBadMoles - this.badMolesSpawned;
+          const badProbability = remainingBadNeeded / remainingMoles;
+          isBad = Phaser.Math.FloatBetween(0, 1) < badProbability;
+        }
+
+        this.totalMolesSpawned++;
+
+        console.log(`Mole ${this.totalMolesSpawned}/${this.totalMolesToSpawn} spawned (${this.gameTime}s remaining)`);
+        if (this.totalMolesSpawned === this.totalMolesToSpawn) {
+          console.log(`Final mole count for ${this.gameDuration}s game: ${this.totalMolesSpawned}`);
+          console.log(`Good moles: ${this.goodMolesSpawned} | Bad moles: ${this.badMolesSpawned}`);
+        }
+
+        // Find an available hole
+        const freeHoleIndices = this.holeOccupied
+          .map((occupied, index) => ({ occupied, index }))
+          .filter(hole => !hole.occupied)
+          .map(hole => hole.index);
+
+        if (freeHoleIndices.length === 0) {
+          this.scheduleNextMole();
+          return;
+        }
+
+        const chosenIndex = Phaser.Math.RND.pick(freeHoleIndices);
+        this.holeOccupied[chosenIndex] = true;
+        const hole = this.holePositions[chosenIndex];
+
+        let mole;
+        if (isBad) {
+          const badKey = Phaser.Math.RND.pick(this.badMoleKeys);
+          mole = this.moles.create(hole.x, hole.y + 50, badKey).setInteractive();
+          mole.isBad = true;
+          this.badMolesSpawned++;  // Track bad moles spawned
+        } else {
+          const randomKey = Phaser.Math.RND.pick(this.moleKeys);
+          mole = this.moles.create(hole.x, hole.y + 50, randomKey).setInteractive();
+          mole.isBad = false;
+          this.goodMolesSpawned++;  // Track good moles spawned
+        }
+
+        mole.setOrigin(0.45, 1);
+        mole.holeIndex = chosenIndex;
+
+        mole.spawnTime = this.time.now; // Record when the mole spawned
+
+        // Use Phaser's timer for consistent animation
+        this.tweens.add({
+          targets: mole,
+          y: hole.y,
+          ease: 'Bounce.easeOut',
+          duration: 250,
+        });
+
+        // Calculate mole duration based on remaining time
+        const minDuration = 400;
+        const maxDuration = 1400;
+        const gameProgress = 1 - (this.gameTime / this.initialGameTime);
+
+        // Exponential decrease in duration
+        const linearPart = gameProgress * 0.8;  // 80% linear
+        const exponentialPart = Math.pow(gameProgress, 1.5) * 0.2;  // 20% exponential, reduced power
+        const durationMultiplier = 1 - (linearPart + exponentialPart);
+
+        // Calculate current duration
+        let moleDuration = minDuration + ((maxDuration - minDuration) * durationMultiplier);
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          moleDuration = Math.max(moleDuration, 550); // Ensure minimum duration on iOS
+        }
+
+        mole.on('pointerdown', () => {
+          if (mole.active) {
+            if (mole.isBad) {
+              this.sound.play('badtap', { volume: 0.6 });
+              this.score -= 5;
+            } else {
+              // Calculate time-based score for good moles
+              const elapsedTime = this.time.now - mole.spawnTime;
+
+              // Calculate points based on 300ms time slots
+              // 0-300ms: 10 points
+              // 301-600ms: 9 points
+              // 601ms+: 8 points (minimum)
+              const timeSlot = Math.floor(elapsedTime / 400);
+              const points = Math.max(10 - timeSlot, 8); // Don't go below 8 points
+
+              this.sound.play('whacksound', { volume: 0.5 });
+              this.score += points;
+            }
+
+            this.holeOccupied[mole.holeIndex] = false;
+            mole.destroy();
+            this.scoreText.setText('Score: ' + this.score);
+          }
+        });
+
+        // Use Phaser's timer for consistent despawn
+        this.time.addEvent({
+          delay: moleDuration,
+          callback: () => {
+            if (mole.active) {
+              this.holeOccupied[mole.holeIndex] = false;
+              mole.destroy();
+            }
+          },
+          callbackScope: this
+        });
+
+        this.scheduleNextMole();
+      }
+    }
+
+    const config = {
+      type: Phaser.AUTO,
+      width: 800,
+      height: 600,
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+      },
+      physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+      },
+      scene: [GameScene, PauseScene]
+    };
+
+    WebFont.load({
+      google: { families: ['Pixelify Sans'] },
+      active: function () {
+        console.log('Font loaded, creating game instance');
+        const game = new Phaser.Game(config);
+      }
+    });
+  </script>
+</body>
+
+</html>

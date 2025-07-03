@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <title>EU Whack-a-Mole Data</title>
+    <!-- Function as a Web App on iOS devices -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="apple-touch-icon" href="assets/icon.png">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="eG Innovations WAM Game Analytics Dashboard">
+    <title>WAM Game Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --eg-blue: #0160E0;
+            --eg-orange: #F29305;
+        }
+
+        body {
+            font-family: 'Inter', 'Roboto', sans-serif;
+            margin: 20px;
+            background: rgb(255, 255, 255);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(216, 233, 255, 1) 100%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.507);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 4px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .filters {
+            background: rgb(207, 207, 207);
+            display: block;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            flex: 1;/
+        }
+
+        /* Add styles for filter labels */
+        .filter-group>label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--eg-blue);
+            font-weight: bold;
+        }
+
+        h1 {
+            color: var(--eg-blue);
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--eg-orange);
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .search-container {
+            margin-bottom: 15px;
+            padding: 0 15px;
+        }
+
+        .search-input {
+            width: 90%;
+            max-width: 400px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--eg-blue);
+        }
+
+        button {
+            background: var(--eg-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #014bb3;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .filter-group {
+            margin: 10px 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            margin: 5px 0;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            margin: 0;
+        }
+
+        .collapsible:after {
+            content: '▼';
+            font-size: 14px;
+            transition: transform 0.5s ease;
+        }
+
+        .collapsible.collapsed:after {
+            transform: rotate(-90deg);
+        }
+
+        .collapse-content {
+            overflow: hidden;
+            transition: all 0.3s ease-out;
+        }
+
+        .collapse-content.collapsed {
+            display: none;
+        }
+
+        #dateRange {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="date"] {
+            padding: 8px;
+            background: #f4f9ff;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading .loading-spinner {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            text-align: center;
+            margin: auto;
+            padding: 10px 20px 20px 20px;
+        }
+
+        .stats-grid h3 {
+            color: var(--eg-blue);
+            margin-bottom: 15px;
+        }
+
+        .stats-grid p {
+            font-family: 'Press Start 2P', 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            color: black;
+            background-color: #fce5c2;
+            outline: #F29305 solid 10px;
+            padding: 35px 0 0 0;
+            margin: auto;
+            width: 120px;
+            height: 60px;
+        }
+
+        .reset-select-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0px;
+            width: 100%;
+        }
+
+        .reset-select-group label {
+            display: block;
+            color: var(--eg-blue);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .reset-select-group select {
+            width: 90%;
+            padding: 8px;
+            background: #f4f9ff;
+            border-radius: 4px;
+            border: 1px solid #333;
+            margin-bottom: 1px;
+        }
+
+        #resetRange {
+            display: none;
+            margin-top: 10px;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid p {
+                font-size: 1.2rem;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .checkbox-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            /* Adjust table display for mobile */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            /* Make summary cards stack nicely */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
+            }
+
+            /* Adjust font sizes for mobile */
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            h3 {
+                font-size: 1rem;
+            }
+
+            /* Make the date range inputs stack */
+            #dateRange {
+                flex-direction: column;
+            }
+
+            /* Adjust card padding */
+            .card {
+                padding: 15px;
+                margin: 8px 0;
+            }
+
+            /* Make buttons more tappable */
+            button {
+                padding: 12px 20px;
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            /* Increase tap target size for checkboxes */
+            input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+            }
+
+            /* Make select boxes full width */
+            select {
+                width: 100%;
+            }
+
+            .high-scores-table {
+                display: table;
+                font-size: 14px;
+                table-layout: fixed;
+                width: 100%;
+            }
+
+            .high-scores-table td {
+                padding: 4px 4px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: normal;
+                /* Allow text to wrap */
+                word-break: break-word;
+                /* Break long words if needed */
+            }
+
+            .high-scores-table th:nth-child(4),
+            /* Score column */
+            .high-scores-table td:nth-child(4) {
+                text-align: right;
+                padding: 4px 4px;
+                white-space: nowrap;
+            }
+
+            /* Hide less important columns on mobile */
+            .high-scores-table .mobile-hide {
+                display: none;
+            }
+
+            /* Add some visual separation between rows */
+            .high-scores-table tr:nth-child(even) {
+                background-color: #f8f8f8;
+            }
+
+            /* Make rank column compact */
+            .high-scores-table th:first-child,
+            .high-scores-table td:first-child {
+                width: 20px;
+                text-align: center;
+            }
+
+            .search-container {
+                padding: 0;
+            }
+
+            .search-input {
+                max-width: 100%;
+                font-size: 16px;
+                /* Better tap target on mobile */
+                padding: 12px;
+            }
+
+            #allGames {
+                display: block;
+                overflow-x: auto;
+            }
+
+            #allGames th,
+            #allGames td {
+                min-width: 100px;
+                /* Prevent text from becoming too cramped */
+                white-space: normal;
+                /* Allow text to wrap */
+            }
+
+            /* Column widths */
+            /* Rank */
+            .high-scores-table td:nth-child(1) {
+                width: 10%;
+            }
+
+            /* Name */
+            .high-scores-table td:nth-child(2) {
+                width: 35%;
+            }
+
+            /* Company */
+            .high-scores-table td:nth-child(3) {
+                width: 35%;
+            }
+
+            /* Score */
+            .high-scores-table td:nth-child(4) {
+                width: 20%;
+            }
+
+            /* Ensure score alignment */
+            .high-scores-table td:nth-child(4) {
+                text-align: right;
+                padding-right: 8px;
+            }
+
+            /* Hide less important columns on mobile */
+            .mobile-hide,
+            #allGames th:nth-child(5),
+            #allGames td:nth-child(5),
+            #allGames th:nth-child(6),
+            #allGames td:nth-child(6) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginOverlay" style="position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 1000;">
+        <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; width: 100%;">
+            <div class="card" style="width: 90%; max-width: 400px; margin: 0 auto;">
+                <h2 style="font-size: 1.8rem; margin-bottom: 20px;">eG Trade Show Game Dashboard Access</h2>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <input type="email" id="emailInput" class="search-input" placeholder="Email"
+                        style="font-size: 1.2rem; padding: 12px;">
+                    <input type="password" id="passwordInput" class="search-input" placeholder="Password"
+                        style="font-size: 1.2rem; padding: 12px;">
+                    <button onclick="handleLogin()"
+                        style="width: 100%; font-size: 1.2rem; padding: 12px;">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>eG Whack-A-Mole Dashboard</h1>
+        <div
+            style="text-align: center; margin-top: -15px; margin-bottom: 15px; padding: 5px; background-color: #0160E0; color: white; border-radius: 4px;">
+            Europe
+        </div>
+
+        <div class="filters card">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Time Range:</label>
+                    <select id="timeFilter">
+                        <option value="lastReset">Since Last Reset</option>
+                        <option value="betweenResets">Between Resets</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="custom">Custom Range</option>
+                        <option value="allTime">All Time</option>
+                    </select>
+                    <!-- Custom ranges inputs (hidden by default) -->
+                    <div id="resetRange" style="display: none; margin-top: 10px;">
+                        <div class="reset-select-group">
+                            <select id="startReset"></select>
+                        </div>
+                        <div class="reset-select-group">
+                            <select id="endReset"></select>
+                        </div>
+                    </div>
+
+                    <div id="dateRange" style="display: none;">
+                        <input type="date" id="startDate">
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>Conference:</label>
+                    <select id="conferenceFilter">
+                        <option value="all">All Conferences</option>
+                        <option value="undefined">General Play</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Version:</label>
+                    <select id="versionFilter">
+                        <option value="all">All Versions</option>
+                        <option value="1.0.1">1.0.1</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Game Length:</label>
+                    <select id="gameLengthFilter">
+                        <option value="30">30 Seconds</option>
+                        <option value="45">45 Seconds</option>
+                        <option value="all">All Lengths</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Include:</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="includeManual" checked>
+                            Manual Entries
+                        </label>
+                        <label>
+                            <input type="checkbox" id="includeNonHighScores" checked>
+                            Non-High Scores
+                        </label>
+                        <label>
+                            <input type="checkbox" id="includeDisqualified">
+                            Disqualified Scores
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="refreshData()">Apply Filters</button>
+        </div>
+
+        <div class="card">
+            <h2>Top 10 High Scores</h2>
+            <table class="high-scores-table" id="highScores">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Company</th>
+                        <th>Score</th>
+                        <th class="mobile-hide">Time</th>
+                        <th class="mobile-hide">Type</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: center;">
+                <button onclick="copyTop10()" style="background: var(--eg-orange);">
+                    Copy Top 10 List
+                </button>
+            </div>
+        </div>
+
+        <div class="card" style="background: #f8f8f8;">
+            <h2>Summary</h2>
+            <div class="stats-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div>
+                    <h3 style="color: var(--eg-blue);">Games Played</h3>
+                    <p><span id="gamesPlayed">0</span></p>
+                </div>
+                <div>
+                    <h3 style="color: var(--eg-blue);">Average Score</h3>
+                    <p><span id="avgScore">0</span></p>
+                </div>
+                <div>
+                    <h3 style="color: var(--eg-blue);">New High Score Entries</h3>
+                    <p><span id="highScoreCount">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Export Full Data</h2>
+            <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: center;">
+                <button onclick="exportCSV()">
+                    Export Data as CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="collapsible" onclick="toggleCollapse(this)">All Games</h2>
+            <div class="collapse-content">
+                <div class="search-container">
+                    <input type="text" id="gameSearch" class="search-input"
+                        placeholder="Search by name, company, score..." aria-label="Search games">
+                </div>
+                <table id="allGames">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Player</th>
+                            <th>Company</th>
+                            <th>Score</th>
+                            <th>Duration</th>
+                            <th>Version</th>
+                            <th>Conference</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            // Make toggleCollapse globally available
+            window.toggleCollapse = function (element) {
+                element.classList.toggle('collapsed');
+                element.nextElementSibling.classList.toggle('collapsed');
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                // Set initial collapse state for "All Games" section
+                const allGamesSection = document.querySelector('.collapsible');
+                allGamesSection.classList.add('collapsed');
+                allGamesSection.nextElementSibling.classList.add('collapsed');
+            });
+        </script>
+
+        <script type="module">
+            import { auth } from "./firebase-init.js";
+            import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
+
+            // Make login handler globally available
+            window.handleLogin = async function () {
+                const email = document.getElementById('emailInput').value;
+                const password = document.getElementById('passwordInput').value;
+
+                try {
+                    if (!email || !password) {
+                        alert('Please enter both email and password');
+                        return;
+                    }
+
+                    const loginButton = document.querySelector('button[onclick="handleLogin()"]');
+                    loginButton.disabled = true;
+                    loginButton.textContent = 'Logging in...';
+
+                    await signInWithEmailAndPassword(auth, email, password);
+                    document.getElementById('loginOverlay').style.display = 'none';
+                } catch (error) {
+                    let errorMessage = 'Login failed: ';
+
+                    switch (error.code) {
+                        case 'auth/invalid-email':
+                            errorMessage += 'Invalid email format';
+                            break;
+                        case 'auth/user-not-found':
+                            errorMessage += 'Email not recognized';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage += 'Incorrect password';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage += 'Too many attempts. Please try again later';
+                            break;
+                        default:
+                            errorMessage += error.message;
+                    }
+
+                    alert(errorMessage);
+                } finally {
+                    const loginButton = document.querySelector('button[onclick="handleLogin()"]');
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Login';
+                }
+            }
+
+            // Check auth state on load
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    document.getElementById('loginOverlay').style.display = 'none';
+                } else {
+                    document.getElementById('loginOverlay').style.display = 'flex';
+                }
+            });
+
+            // Add enter key support
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') window.handleLogin();
+            });
+        </script>
+
+        <script type="module">
+            import { app, database, ref, get, query, orderByChild, GAME_CONFERENCE } from "./firebase-init.js";
+
+            async function loadWamGameData(timeFilter) {
+                const container = document.querySelector('.container');
+                container.classList.add('loading');
+
+                try {
+                    // Get all required data in parallel
+                    const [scoresSnapshot, analyticsSnapshot, resetsSnapshot, settingsSnapshot] = await Promise.all([
+                        get(ref(database, 'scores')),
+                        get(ref(database, 'gameAnalytics')),
+                        get(ref(database, 'resets')),
+                        get(ref(database, 'settings'))
+                    ]);
+
+                    const settings = settingsSnapshot.val() || { gameDuration: 30 };
+
+                    // Create maps for easier lookup
+                    const analyticsMap = new Map();
+                    Object.values(analyticsSnapshot.val() || {}).forEach(analytics => {
+                        analyticsMap.set(analytics.gameId, analytics);
+                    });
+
+                    // Process scores with analytics data
+                    let scores = [];
+                    Object.values(scoresSnapshot.val() || {}).forEach(score => {
+                        const analytics = analyticsMap.get(score.gameId) || {};
+                        scores.push({
+                            ...score,
+                            moleStats: analytics.moleStats || {},
+                            deviceType: analytics.deviceType,
+                            gameVersion: analytics.gameVersion,
+                            conference: analytics.conference || 'undefined'
+                        });
+                    });
+
+                    // Apply last reset filter if selected
+                    if (timeFilter === 'lastReset') {
+                        const resets = Object.values(resetsSnapshot.val() || {});
+                        const lastReset = resets.reduce((latest, reset) => {
+                            return (!latest || reset.timestamp > latest.timestamp) ? reset : latest;
+                        }, null);
+
+                        if (lastReset) {
+                            scores = scores.filter(score =>
+                                new Date(score.timestamp) > new Date(lastReset.timestamp)
+                            );
+                        }
+                    }
+                    if (timeFilter === 'betweenResets') {
+                        const startResetId = document.getElementById('startReset').value;
+                        const endResetId = document.getElementById('endReset').value;
+
+                        const resets = Object.entries(resetsSnapshot.val() || {}).map(([id, reset]) => ({
+                            id,
+                            ...reset
+                        }));
+
+                        const startReset = resets.find(r => r.id === startResetId);
+                        const endReset = resets.find(r => r.id === endResetId);
+
+                        if (startReset && endReset) {
+                            scores = scores.filter(score => {
+                                const scoreDate = new Date(score.timestamp);
+                                return scoreDate >= new Date(startReset.timestamp) &&
+                                    scoreDate <= new Date(endReset.timestamp);
+                            });
+                        }
+                    }
+
+                    scores = scores.filter(score => {
+                        // Time filter
+                        const scoreDate = new Date(score.timestamp);
+                        const today = new Date();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+
+                        let passesTimeFilter = true;
+                        if (timeFilter === 'today') {
+                            passesTimeFilter = scoreDate.toDateString() === today.toDateString();
+                        } else if (timeFilter === 'yesterday') {
+                            passesTimeFilter = scoreDate.toDateString() === yesterday.toDateString();
+                        } else if (timeFilter === 'custom') {
+                            const start = new Date(document.getElementById('startDate').value);
+                            const end = new Date(document.getElementById('endDate').value);
+                            passesTimeFilter = scoreDate >= start && scoreDate <= end;
+                        }
+
+                        // Version filter
+                        const versionFilter = document.getElementById('versionFilter').value;
+                        console.log('Version comparison:', {
+                            filter: versionFilter,
+                            scoreVersion: score.gameVersion,
+                            score: score
+                        });
+                        const passesVersionFilter = versionFilter === 'all' ||
+                            (score.gameVersion && score.gameVersion.toString() === versionFilter);
+
+                        // Include/exclude filters
+                        const includeManual = document.getElementById('includeManual').checked;
+                        const includeDisqualified = document.getElementById('includeDisqualified').checked;
+                        const includeNonHighScores = document.getElementById('includeNonHighScores').checked;
+
+                        const passesManualFilter = includeManual || !score.isManualEntry;
+                        const passesDisqualifiedFilter = includeDisqualified || !score.disqualified;
+                        const passesHighScoreFilter = includeNonHighScores || score.isHighScore;
+
+                        const lengthFilter = document.getElementById('gameLengthFilter').value;
+                        const passesLengthFilter = lengthFilter === 'all' ||
+                            (score.gameDuration && score.gameDuration.toString() === lengthFilter);
+
+                        const conferenceFilter = document.getElementById('conferenceFilter').value;
+                        console.log('Conference comparison:', {
+                            filter: conferenceFilter,
+                            scoreConference: score.conference,
+                            score: score
+                        });
+                        const passesConferenceFilter =
+                            conferenceFilter === 'all' ||
+                            (conferenceFilter === 'undefined' && !score.conference) ||
+                            (score.conference && score.conference.toString() === conferenceFilter);
+
+                        return passesTimeFilter && passesVersionFilter &&
+                            passesManualFilter && passesDisqualifiedFilter &&
+                            passesHighScoreFilter && passesLengthFilter &&
+                            passesConferenceFilter;
+                    });
+
+                    updateDashboard(scores);
+                } catch (error) {
+                    console.error("Error loading WAM game data:", error);
+                } finally {
+                    container.classList.remove('loading');
+                }
+            }
+
+            // Add event listener for custom date range visibility
+            document.getElementById('timeFilter').addEventListener('change', function () {
+                const customRange = document.getElementById('dateRange');
+                const resetRange = document.getElementById('resetRange');
+
+                customRange.style.display = this.value === 'custom' ? 'flex' : 'none';
+                resetRange.style.display = this.value === 'betweenResets' ? 'flex' : 'none';
+
+                if (this.value === 'betweenResets') {
+                    populateResetDropdowns();
+                }
+            });
+
+            document.getElementById('gameSearch').addEventListener('input', (e) => {
+                filterGameTable(e.target.value);
+            });
+
+            // Set initial dates for custom range
+            const today = new Date();
+            document.getElementById('startDate').valueAsDate = today;
+            document.getElementById('endDate').valueAsDate = today;
+
+            function updateDashboard(scores) {
+                // Update statistics
+                const stats = calculateStats(scores);
+                document.getElementById('gamesPlayed').textContent = stats.totalGames.toLocaleString();
+                document.getElementById('avgScore').textContent = stats.averageScore.toFixed(1);
+                document.getElementById('highScoreCount').textContent = stats.highScoreCount.toLocaleString();
+
+                // Helper function to clean strings (same as in index.html)
+                const cleanString = (str) => {
+                    return str
+                        .toLowerCase()
+                        .replace(/[^\w\s]/g, '')  // Remove punctuation
+                        .replace(/\s+/g, '')      // Remove all spaces
+                        .trim();
+                };
+
+                // Group by player and keep highest score
+                const playerMap = new Map();
+                scores.forEach(score => {
+                    const cleanName = cleanString(score.name);
+                    const cleanCompany = cleanString(score.company);
+                    const playerKey = `${cleanName}${cleanCompany}`;
+
+                    if (!playerMap.has(playerKey) || playerMap.get(playerKey).score < score.score) {
+                        playerMap.set(playerKey, score);
+                    }
+                });
+
+                // Convert to array and sort by score
+                const uniqueScores = Array.from(playerMap.values())
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                // Update high scores table
+                const highScoresBody = document.querySelector('#highScores tbody');
+                highScoresBody.innerHTML = '';
+
+                uniqueScores.forEach((score, index) => {
+                    const row = highScoresBody.insertRow();
+                    row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${score.name}</td>
+            <td>${score.company}</td>
+            <td>${score.score.toLocaleString()}</td>
+            <td class="mobile-hide">${new Date(score.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+            <td class="mobile-hide">${score.isManualEntry ? 'Manual' : 'Game'}</td>
+        `;
+                });
+
+                // Update all games table
+                const allGamesBody = document.querySelector('#allGames tbody');
+                allGamesBody.innerHTML = '';
+
+                scores
+                    .sort((a, b) => b.score - a.score)
+                    .forEach(score => {
+                        const row = allGamesBody.insertRow();
+                        row.innerHTML = `
+                            <td>${new Date(score.timestamp).toLocaleString()}</td>
+                            <td>${score.name}</td>
+                            <td>${score.company}</td>
+                            <td>${score.score}</td>
+                            <td>${score.gameDuration}s</td>
+                            <td>${score.gameVersion || 'N/A'}</td>
+                            <td>${score.conference || 'General Play'}</td>
+                            <td>${score.moleStats ? `Good: ${score.moleStats.goodSpawned || 0} Bad: ${score.moleStats.badSpawned || 0}` : 'N/A'}</td>
+                        `;
+                    });
+            }
+
+            // Add search functionality to all games table
+            function filterGameTable(searchText) {
+                const rows = document.querySelectorAll('#allGames tbody tr');
+                searchText = searchText.toLowerCase();
+
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchText) ? '' : 'none';
+                });
+            }
+
+            function calculateStats(scores) {
+                // Sort scores by score value to determine top 10
+                const topScores = [...scores].sort((a, b) => b.score - a.score).slice(0, 10);
+                const topScoreIds = new Set(topScores.map(score => score.gameId));
+
+                return {
+                    totalGames: scores.length,
+                    averageScore: scores.reduce((sum, score) => sum + score.score, 0) / scores.length || 0,
+                    // Count scores where name and company were provided (indicating they qualified for high score entry)
+                    highScoreCount: scores.filter(score =>
+                        score.name && score.name.trim() !== '' &&
+                        score.company && score.company.trim() !== ''
+                    ).length
+                };
+            }
+
+            function formatResetOption(reset) {
+                const date = new Date(reset.timestamp);
+                const days = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
+                const dayName = days[date.getDay()];
+                const formattedDate = date.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                });
+                const time = date.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                return `${dayName}, ${formattedDate}, ${time}`;
+            }
+
+            async function populateResetDropdowns() {
+                const resetsSnapshot = await get(ref(database, 'resets'));
+                const resets = Object.entries(resetsSnapshot.val() || {}).map(([id, reset]) => ({
+                    id,
+                    ...reset
+                }));
+
+                // Sort resets by timestamp, newest first
+                resets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                const startSelect = document.getElementById('startReset');
+                const endSelect = document.getElementById('endReset');
+
+                startSelect.innerHTML = resets.map(reset =>
+                    `<option value="${reset.id}">${formatResetOption(reset)}</option>`
+                ).join('');
+                endSelect.innerHTML = startSelect.innerHTML;
+
+                // Default end to most recent reset
+                if (resets.length > 0) {
+                    endSelect.value = resets[0].id;
+                }
+                // Default start to second most recent reset
+                if (resets.length > 1) {
+                    startSelect.value = resets[1].id;
+                }
+            }
+
+            function toggleCollapse(element) {
+                element.classList.toggle('collapsed');
+                element.nextElementSibling.classList.toggle('collapsed');
+            }
+
+            async function initializeFilters() {
+                try {
+                    // Get versions from analytics data
+                    const analyticsRef = ref(database, 'gameAnalytics');
+                    const snapshot = await get(analyticsRef);
+                    const versions = new Set();
+                    const conferences = new Set();
+
+                    if (snapshot.exists()) {
+                        Object.values(snapshot.val()).forEach(game => {
+                            if (game.gameVersion) versions.add(game.gameVersion);
+                            if (game.conference) conferences.add(game.conference);
+                        });
+                    }
+
+                    conferences.add(GAME_CONFERENCE);
+
+                    const conferenceSelect = document.getElementById('conferenceFilter');
+                    conferenceSelect.innerHTML = `
+                        <option value="all">All Conferences</option>
+                        <option value="undefined">General Play</option>
+                        ${Array.from(conferences).map(c => `<option value="${c}">${c}</option>`).join('')}
+                    `;
+                    // Set default to current conference
+                    conferenceSelect.value = GAME_CONFERENCE;
+
+                    // Convert Set to Array and sort
+                    const sortedVersions = Array.from(versions).sort((a, b) => {
+                        const [aMajor, aMinor, aPatch] = a.split('.').map(Number);
+                        const [bMajor, bMinor, bPatch] = b.split('.').map(Number);
+
+                        // Compare major version
+                        if (bMajor !== aMajor) return bMajor - aMajor;
+                        // Compare minor version
+                        if (bMinor !== aMinor) return bMinor - aMinor;
+                        // Compare patch version
+                        return bPatch - aPatch;
+                    });
+
+                    const versionSelect = document.getElementById('versionFilter');
+                    versionSelect.innerHTML = `
+                        <option value="all">All Versions</option>
+                        ${sortedVersions.map(v => `<option value="${v}">${v}</option>`).join('')}
+                    `;
+                    // Set default to newest version
+                    if (sortedVersions.length > 0) {
+                        versionSelect.value = sortedVersions[0];
+                    }
+
+                    // Set other defaults
+                    document.getElementById('timeFilter').value = 'lastReset';
+                    document.getElementById('gameLengthFilter').value = '30';
+                } catch (error) {
+                    console.error("Error loading filters:", error);
+                }
+            }
+
+            window.refreshData = () => {
+                const timeFilter = document.getElementById('timeFilter').value;
+                loadWamGameData(timeFilter);
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeFilters();
+                refreshData();
+            });
+            // Add inside your module script, before the final script closing tag
+            window.copyTop10 = function () {
+                const rows = document.querySelectorAll('#highScores tbody tr');
+                let text = 'Top 10 WAM Scores:\n\n';
+
+                rows.forEach(row => {
+                    const rank = row.cells[0].textContent;
+                    const name = row.cells[1].textContent;
+                    const company = row.cells[2].textContent;
+                    text += `#${rank} - ${name}, ${company}\n`;
+                });
+
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Top 10 list copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy text. Please try again.');
+                });
+            }
+
+            window.exportCSV = function () {
+                const rows = document.querySelectorAll('#allGames tbody tr');
+                let csv = 'Timestamp,Name,Company,Score,Duration,Version,Conference,Good Moles,Bad Moles\n';
+
+                rows.forEach(row => {
+                    // Only include visible rows (respecting current filters)
+                    if (row.style.display !== 'none') {
+                        const cells = Array.from(row.cells).map(cell => {
+                            // Clean the cell content for CSV format
+                            let content = cell.textContent.replace(/,/g, ';');
+                            // If content includes spaces or special chars, wrap in quotes
+                            return content.includes(' ') ? `"${content}"` : content;
+                        });
+                        csv += cells.join(',') + '\n';
+                    }
+                });
+
+                // Create and trigger download
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `wam_scores_eu_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        </script>
+</body>
+
+</html>
